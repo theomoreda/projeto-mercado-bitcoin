@@ -147,3 +147,45 @@ details summary {
   color: var(--muted);
   font-size: 0.85rem;
 }
+
+.segmented {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.segmented button {
+  flex: 1;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  font-weight: 500;
+}
+
+.segmented button.active {
+  background: var(--text);
+  color: #fff;
+}
+
+.link-out {
+  color: var(--brand);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.tech {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  margin-top: 8px;
+  font-size: 0.85rem;
+}
+
+.tech dt {
+  color: var(--muted);
+}
+
+.mono {
+  font-family: ui-monospace, monospace;
+  word-break: break-all;
+}

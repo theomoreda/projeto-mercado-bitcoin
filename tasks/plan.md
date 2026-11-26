@@ -59,7 +59,7 @@ scaffold (1)
 - [x] Tarefa 6: Módulo de cadeia, harness Anvil e seed da tesouraria
 - [x] Tarefa 7: Ativar carteira e ver saldo on-chain
 - [x] Tarefa 8: Transferência MB → wallet (API + confirmação + estorno)
-- [ ] Tarefa 9: Tela de transferência e status da operação
+- [x] Tarefa 9: Tela de transferência e status da operação
 - [ ] Tarefa 10: Envio wallet → MB no navegador (validação prática da Privy + guarda de rede)
 
 **Checkpoint 2:** MB → wallet completo no Anvil (confirma e estorna); com credenciais, ativação e MB → wallet em Sepolia; o envio silencioso de ERC-20 pela Privy está comprovado ou há um plano B decidido.

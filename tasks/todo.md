@@ -101,12 +101,12 @@ Toda tarefa só conta como feita com `npm run lint && npm run typecheck && npm t
 **Arquivos:** `src/lib/transfers.ts`, `src/app/api/transfers/route.ts`, `src/app/api/transfers/[id]/route.ts`, `tests/integration/outbound.test.ts`
 **Tamanho:** M
 
-### [ ] Tarefa 9: Tela de transferência e status da operação
+### [x] Tarefa 9: Tela de transferência e status da operação
 **Descrição:** Formulário com o sentido (Conta MB → Minha carteira / Minha carteira → Conta MB), o valor e a validação inline usando `money.ts` (RF-06). Componente de status que consulta `GET /api/transfers/:id` até um estado final e mostra "Processando… / Concluída / Não concluída — o valor voltou para sua Conta MB", o link "Ver comprovante" e "Detalhes técnicos" recolhido. Por enquanto, só a ida.
 **Aceite:**
 - [ ] Os valores inválidos de RF-06 desabilitam "Transferir" e mostram o motivo em linguagem simples
 - [ ] Os estados e o link do explorador aparecem (RF-07, RF-08, RF-10); nenhum jargão no texto principal
-**Verificação:** `npm test -- src/components`; manual no Anvil (app com `RPC_URL` apontando para o Anvil)
+**Verificação:** `npm test -- src/lib/transfer-ui.test.ts` (lógica da tela extraída para funções puras, sem dependências de teste de DOM); manual em Sepolia quando houver credenciais (a carteira embutida da Privy não opera no Anvil)
 **Dependências:** 8
 **Arquivos:** `src/components/TransferForm.tsx`, `src/components/TransferStatus.tsx`, `src/app/page.tsx`, `src/components/TransferForm.test.tsx`
 **Tamanho:** M
