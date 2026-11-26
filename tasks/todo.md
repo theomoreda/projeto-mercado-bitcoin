@@ -80,7 +80,7 @@ Toda tarefa só conta como feita com `npm run lint && npm run typecheck && npm t
 **Arquivos:** `src/lib/chain.ts`, `tests/integration/anvil.ts`, `tests/integration/chain.test.ts`, `scripts/seed.ts`
 **Tamanho:** M
 
-### [ ] Tarefa 7: Ativar carteira e ver saldo on-chain
+### [x] Tarefa 7: Ativar carteira e ver saldo on-chain
 **Descrição:** Card "Minha carteira" com o botão "Ativar minha carteira" (`createWallet()`); `POST /api/wallet` grava o endereço na conta (uma vez) e `last_scanned_block` = bloco atual; `GET /api/me` passa a devolver o saldo on-chain; o card mostra o saldo e o endereço encurtado com botão copiar.
 **Aceite:**
 - [ ] Ativar duas vezes não troca o endereço; um endereço já usado por outra conta é rejeitado

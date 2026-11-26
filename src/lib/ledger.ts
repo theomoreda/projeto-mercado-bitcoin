@@ -6,14 +6,8 @@
 import { and, eq, sql } from "drizzle-orm";
 import type { Executor, Tx } from "../db/index.ts";
 import { accounts, transfers, type Account, type Transfer } from "../db/schema.ts";
+import { isUniqueViolation } from "./http.ts";
 import { centsToMicro, MICRO_PER_CENT, type Cents, type Micro } from "./money.ts";
-
-const UNIQUE_VIOLATION = "23505";
-
-function isUniqueViolation(err: unknown): boolean {
-  const e = err as { code?: string; cause?: { code?: string } };
-  return e?.code === UNIQUE_VIOLATION || e?.cause?.code === UNIQUE_VIOLATION;
-}
 
 /** Saldo custodial total em micro-unidades: disponível + reservado + excedente. */
 export function custodialMicro(

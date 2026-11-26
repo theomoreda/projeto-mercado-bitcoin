@@ -25,3 +25,9 @@ export async function respond(handler: () => Promise<unknown>): Promise<Response
     return json({ error: "erro_interno" }, 500);
   }
 }
+
+/** Violação de UNIQUE no Postgres (o drizzle embrulha o erro do driver em `cause`). */
+export function isUniqueViolation(err: unknown): boolean {
+  const e = err as { code?: string; cause?: { code?: string } };
+  return e?.code === "23505" || e?.cause?.code === "23505";
+}

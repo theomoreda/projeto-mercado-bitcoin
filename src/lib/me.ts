@@ -1,20 +1,15 @@
-import type { Executor } from "../db/index.ts";
+import type { Address } from "viem";
 import type { Account } from "../db/schema.ts";
-import { authenticate, type Identity, type Verifier } from "./auth.ts";
-import type { ServerConfig } from "./config.ts";
+import { authenticate, type Identity } from "./auth.ts";
+import { tokenBalance } from "./chain.ts";
+import type { AppDeps } from "./deps.ts";
 import { HttpError, respond } from "./http.ts";
 import { createAccount } from "./ledger.ts";
-
-export type MeDeps = {
-  db: Executor;
-  verify: Verifier;
-  config: Pick<ServerConfig, "demoEmails" | "initialCents">;
-};
 
 /** Autentica e devolve a conta demo, criando-a no primeiro acesso de um e-mail permitido. */
 export async function requireAccount(
   req: Request,
-  deps: MeDeps,
+  deps: Pick<AppDeps, "db" | "verify" | "config">,
 ): Promise<{ identity: Identity; account: Account }> {
   const identity = await authenticate(req, deps.verify);
   const email = identity.email?.toLowerCase();
@@ -28,13 +23,16 @@ export async function requireAccount(
   return { identity, account };
 }
 
-export function handleMe(req: Request, deps: MeDeps): Promise<Response> {
+export function handleMe(req: Request, deps: AppDeps): Promise<Response> {
   return respond(async () => {
     const { identity, account } = await requireAccount(req, deps);
+    const address = account.walletAddress as Address | null;
     return {
       email: identity.email,
       account: { availableCents: account.availableCents, reservedCents: account.reservedCents },
-      wallet: null,
+      wallet: address
+        ? { address, balanceMicro: await tokenBalance(await deps.chain(), address) }
+        : null,
     };
   });
 }

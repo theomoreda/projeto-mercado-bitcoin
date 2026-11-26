@@ -4,6 +4,7 @@ import { usePrivy } from "@privy-io/react-auth";
 import { useCallback, useEffect, useState } from "react";
 import { ApiError, useApi } from "@/lib/api-client";
 import { AccountCard } from "./AccountCard";
+import { WalletCard } from "./WalletCard";
 
 export type Me = {
   email: string;
@@ -50,6 +51,7 @@ export function Dashboard() {
             availableCents={BigInt(me.account.availableCents)}
             reservedCents={BigInt(me.account.reservedCents)}
           />
+          <WalletCard wallet={me.wallet} onActivated={refresh} />
         </div>
       )}
     </main>

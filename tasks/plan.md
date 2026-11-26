@@ -57,7 +57,7 @@ scaffold (1)
 
 ### Fase 2 — Semana 2: carteira e MB → wallet
 - [x] Tarefa 6: Módulo de cadeia, harness Anvil e seed da tesouraria
-- [ ] Tarefa 7: Ativar carteira e ver saldo on-chain
+- [x] Tarefa 7: Ativar carteira e ver saldo on-chain
 - [ ] Tarefa 8: Transferência MB → wallet (API + confirmação + estorno)
 - [ ] Tarefa 9: Tela de transferência e status da operação
 - [ ] Tarefa 10: Envio wallet → MB no navegador (validação prática da Privy + guarda de rede)

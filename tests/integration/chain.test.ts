@@ -78,7 +78,7 @@ describe("tesouraria → wallet", () => {
 
 describe("wallet → tesouraria", () => {
   it("encontra os Transfer da wallet para a tesouraria numa faixa de blocos", async () => {
-    const from = await c.pub.getBlockNumber();
+    const from = await c.pub.getBlockNumber({ cacheTime: 0 });
     const hash = await c.user.writeContract({
       address: c.token,
       abi: erc20Abi,
@@ -86,7 +86,7 @@ describe("wallet → tesouraria", () => {
       args: [c.ctx.treasury.address, 1_234_567n],
     });
     await c.pub.waitForTransactionReceipt({ hash });
-    const found = await findInboundTransfers(c.ctx, USER, from, await c.pub.getBlockNumber());
+    const found = await findInboundTransfers(c.ctx, USER, from, await c.pub.getBlockNumber({ cacheTime: 0 }));
     expect(found).toEqual([{ txHash: hash, amountMicro: 1_234_567n }]);
   });
 });

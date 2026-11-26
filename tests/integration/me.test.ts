@@ -1,21 +1,17 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { accounts } from "../../src/db/schema.ts";
-import type { Verifier } from "../../src/lib/auth.ts";
 import { handleMe } from "../../src/lib/me.ts";
 import { db, resetDb } from "./db.ts";
+import { makeDeps, req } from "./deps.ts";
 
-const config = { demoEmails: ["demo@inteli.edu.br"], initialCents: 100_000n };
-
-const verify: Verifier = async (token) => {
-  if (token === "valid-demo") return { privyUserId: "did:privy:demo", email: "Demo@Inteli.edu.br" };
-  if (token === "valid-other") return { privyUserId: "did:privy:other", email: "x@y.com" };
-  throw new Error("invalid token");
+const deps = makeDeps({ demo: { email: "Demo@Inteli.edu.br" } });
+// "other" é um usuário Privy válido, mas fora de DEMO_EMAILS.
+const depsWithOutsider = {
+  ...deps,
+  verify: async (t: string) =>
+    t === "tok-other" ? { privyUserId: "did:privy:other", email: "x@y.com" } : deps.verify(t),
 };
-
-const request = (token?: string) =>
-  new Request("http://test/api/me", { headers: token ? { authorization: `Bearer ${token}` } : {} });
-
-const call = (token?: string) => handleMe(request(token), { db, verify, config });
+const call = (token?: string) => handleMe(req("/api/me", token), depsWithOutsider);
 
 beforeEach(resetDb);
 
@@ -29,14 +25,14 @@ describe("GET /api/me", () => {
   });
 
   it("e-mail fora de DEMO_EMAILS → 403 acesso restrito, sem criar conta", async () => {
-    const res = await call("valid-other");
+    const res = await call("tok-other");
     expect(res.status).toBe(403);
     expect(await res.json()).toEqual({ error: "acesso_restrito" });
     expect(await db.select().from(accounts)).toHaveLength(0);
   });
 
   it("primeiro acesso cria a conta demo com o saldo inicial (e-mail sem diferenciar maiúsculas)", async () => {
-    const res = await call("valid-demo");
+    const res = await call("tok-demo");
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({
       email: "Demo@Inteli.edu.br",
@@ -46,7 +42,7 @@ describe("GET /api/me", () => {
   });
 
   it("acessos concorrentes não duplicam a conta", async () => {
-    await Promise.all([call("valid-demo"), call("valid-demo"), call("valid-demo")]);
+    await Promise.all([call("tok-demo"), call("tok-demo"), call("tok-demo")]);
     expect(await db.select().from(accounts)).toHaveLength(1);
   });
 });
