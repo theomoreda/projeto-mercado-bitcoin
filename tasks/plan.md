@@ -51,7 +51,7 @@ scaffold (1)
 - [x] Tarefa 2: Regras de valor (`money.ts`)
 - [x] Tarefa 3: Contrato `MockUSDC` com testes e script de deploy
 - [x] Tarefa 4: Schema e ledger atômico
-- [ ] Tarefa 5: Login por e-mail e conta de demonstração
+- [x] Tarefa 5: Login por e-mail e conta de demonstração
 
 **Checkpoint 1:** lint, typecheck, unit e integração de ledger verdes; `forge test` verde; com credenciais Privy, o login abre o painel com `1.000,00 USDC` na Conta MB.
 

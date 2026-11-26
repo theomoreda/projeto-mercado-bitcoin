@@ -15,11 +15,14 @@
     "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
+    "@privy-io/node": "^0.42.0",
+    "@privy-io/react-auth": "^3.52.1",
     "drizzle-orm": "^0.45.4",
     "next": "16.4.6",
     "pg": "^8.23.1",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "viem": "^2.58.7"
   },
   "devDependencies": {
     "@types/node": "^24.19.4",
@@ -37,5 +40,8 @@
   "license": "MIT",
   "engines": {
     "node": ">=22"
+  },
+  "overrides": {
+    "@solana/kit": "^8.6.0"
   }
 }

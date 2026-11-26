@@ -50,7 +50,7 @@ Toda tarefa só conta como feita com `npm run lint && npm run typecheck && npm t
 **Arquivos:** `src/db/schema.ts`, `drizzle.config.ts`, `src/db/migrations/*`, `src/lib/ledger.ts`, `tests/integration/ledger.test.ts`
 **Tamanho:** M
 
-### [ ] Tarefa 5: Login por e-mail e conta de demonstração
+### [x] Tarefa 5: Login por e-mail e conta de demonstração
 **Descrição:** `PrivyProvider` (`defaultChain`/`supportedChains` = Sepolia, sem criação automática de wallet); tela "Entrar" headless (e-mail → código) com `useLoginWithEmail`; `auth.ts` validando o Bearer token com `@privy-io/node`; `GET /api/me`, que cria a conta no primeiro acesso de um e-mail de `DEMO_EMAILS` com `INITIAL_BALANCE` e devolve os saldos; painel com o card "Conta MB".
 **Aceite:**
 - [ ] Sem token ou com token inválido → 401; e-mail fora de `DEMO_EMAILS` → "acesso restrito à demonstração"
@@ -58,7 +58,7 @@ Toda tarefa só conta como feita com `npm run lint && npm run typecheck && npm t
 - [ ] Painel mostra "Conta MB · 1.000,00 USDC" (verificação manual quando houver credenciais Privy)
 **Verificação:** `npm run test:integration -- tests/integration/me.test.ts` (verificador Privy injetado/mocado); manual em `npm run dev`
 **Dependências:** 4
-**Arquivos:** `src/app/providers.tsx`, `src/app/entrar/page.tsx`, `src/lib/auth.ts`, `src/app/api/me/route.ts`, `src/app/page.tsx`
+**Arquivos:** `src/app/providers.tsx`, `src/components/LoginForm.tsx` (login na própria `/`, sem rota separada), `src/lib/auth.ts`, `src/app/api/me/route.ts`, `src/app/page.tsx`
 **Tamanho:** M
 
 ### Checkpoint 1 — fundação

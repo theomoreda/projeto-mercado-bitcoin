@@ -1,8 +1,17 @@
+"use client";
+
+import { usePrivy } from "@privy-io/react-auth";
+import { Dashboard } from "@/components/Dashboard";
+import { LoginForm } from "@/components/LoginForm";
+
 export default function Home() {
-  return (
-    <main>
-      <h1>MB Wallet Bridge</h1>
-      <p>Sua Conta MB e sua carteira pessoal, lado a lado.</p>
-    </main>
-  );
+  const { ready, authenticated } = usePrivy();
+  if (!ready) return <main className="shell muted">Carregando…</main>;
+  if (!authenticated)
+    return (
+      <main className="shell">
+        <LoginForm />
+      </main>
+    );
+  return <Dashboard />;
 }
