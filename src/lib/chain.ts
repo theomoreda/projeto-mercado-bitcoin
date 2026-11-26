@@ -11,6 +11,7 @@ import {
   isAddressEqual,
   parseAbi,
   parseEventLogs,
+  parseTransaction,
   TransactionNotFoundError,
   TransactionReceiptNotFoundError,
   type Address,
@@ -84,7 +85,8 @@ async function signTreasuryTx(
     gas?: bigint;
     nonce?: number;
     minNonce?: bigint;
-    feeBump?: bigint;
+    /** Piso de taxa (ex.: substituição de um tx pendente exige taxa maior que a original). */
+    minFees?: { maxFeePerGas: bigint; maxPriorityFeePerGas: bigint };
   },
 ): Promise<SignedTx> {
   const pc = ctx.publicClient;
@@ -95,7 +97,9 @@ async function signTreasuryTx(
   ]);
   // Nonce reservado no banco mas ainda não transmitido não aparece em "pending" no nó.
   const nonce = Math.max(pendingNonce, Number(tx.minNonce ?? 0n));
-  const bump = tx.feeBump ?? 1n;
+  const maxOf = (a: bigint, b = 0n) => (a > b ? a : b);
+  const maxFeePerGas = maxOf(fees.maxFeePerGas, tx.minFees?.maxFeePerGas);
+  const maxPriorityFeePerGas = maxOf(fees.maxPriorityFeePerGas, tx.minFees?.maxPriorityFeePerGas);
   const rawTx = await ctx.treasury.signTransaction({
     chainId: ctx.chainId,
     type: "eip1559",
@@ -104,8 +108,8 @@ async function signTreasuryTx(
     value: 0n,
     nonce,
     gas,
-    maxFeePerGas: fees.maxFeePerGas * bump,
-    maxPriorityFeePerGas: fees.maxPriorityFeePerGas * bump,
+    maxFeePerGas,
+    maxPriorityFeePerGas,
   });
   return { txHash: keccak256(rawTx), nonce: BigInt(nonce), rawTx };
 }
@@ -183,6 +187,28 @@ export function inboundAmountFromLogs(ctx: ChainCtx, logs: Log[], from: Address)
         isAddressEqual(l.args.to, ctx.treasury.address),
     )
     .reduce((sum, l) => sum + l.args.value, 0n);
+}
+
+/**
+ * Cancela um tx da tesouraria preso no mempool: envia 0 ETH para a própria tesouraria
+ * com o mesmo nonce e taxa ≥ 130% da original, para que a rede o prefira. Repetir é
+ * seguro: se o cancelamento anterior já está no mempool, o nó recusa e seguimos.
+ */
+export async function sendCancel(ctx: ChainCtx, nonce: bigint, originalRawTx: Hex): Promise<void> {
+  const original = parseTransaction(originalRawTx);
+  const bump = (v: bigint | undefined) => ((v ?? 0n) * 13n) / 10n + 1n;
+  const cancel = await signTreasuryTx(ctx, {
+    to: ctx.treasury.address,
+    gas: 21_000n,
+    nonce: Number(nonce),
+    minFees: {
+      maxFeePerGas: bump(original.maxFeePerGas),
+      maxPriorityFeePerGas: bump(original.maxPriorityFeePerGas),
+    },
+  });
+  await broadcast(ctx, cancel.rawTx).catch((err) =>
+    console.warn("cancelamento não aceito (provavelmente já no mempool)", (err as Error).message),
+  );
 }
 
 /** O nonce da tesouraria já foi usado por um tx minerado (o nosso ou um substituto)? */

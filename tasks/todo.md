@@ -152,7 +152,7 @@ Toda tarefa só conta como feita com `npm run lint && npm run typecheck && npm t
 **Arquivos:** `src/lib/transfers.ts`, `src/app/api/me/route.ts`, `tests/integration/scan.test.ts`
 **Tamanho:** S
 
-### [ ] Tarefa 13: Transação presa: cancelamento e estorno seguro
+### [x] Tarefa 13: Transação presa: cancelamento e estorno seguro
 **Descrição:** Em `advance()`, um MB → wallet sem recibo depois de `expires_at` dispara uma substituta de cancelamento (mesmo nonce, 0 ETH para a própria tesouraria, taxa maior). O estorno só acontece quando o nonce foi consumido por outro tx; se o original minerar no meio do caminho, a transferência segue como confirmada.
 **Aceite:**
 - [ ] No Anvil com automine desligado, um tx preso + janela expirada → cancelamento minerado → `FALHOU` com estorno único

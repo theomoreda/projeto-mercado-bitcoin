@@ -12,6 +12,7 @@ import {
   getTxStatus,
   inboundAmountFromLogs,
   isNonceConsumed,
+  sendCancel,
   signTreasuryTransfer,
   type ChainCtx,
 } from "./chain.ts";
@@ -232,22 +233,28 @@ export async function creditInbound(
 
 async function advanceOutbound(deps: AppDeps, chain: ChainCtx, t: Transfer) {
   const hash = t.txHash as Hex;
+  const expired = t.expiresAt !== null && t.expiresAt < new Date();
   let status = await getTxStatus(chain, hash);
 
-  if (status.kind === "unknown" && t.nonce !== null && (await isNonceConsumed(chain, t.nonce))) {
-    // Outro tx usou o nonce. Reconfere: se o consumidor fomos nós, agora há recibo.
+  if (status.kind !== "mined" && t.nonce !== null && (await isNonceConsumed(chain, t.nonce))) {
+    // Outro tx (um cancelamento ou um substituto) usou o nonce. Reconfere: se o
+    // consumidor fomos nós, agora há recibo; senão o nosso nunca vai minerar.
     status = await getTxStatus(chain, hash);
-    if (status.kind === "unknown") {
-      await refundOutbound(deps.db, t.id, "transacao_substituida");
+    if (status.kind !== "mined") {
+      await refundOutbound(deps.db, t.id, expired ? "transacao_expirada" : "transacao_substituida");
       return undefined;
     }
   }
 
-  if (status.kind === "unknown") {
-    await broadcast(chain, t.rawTx as Hex);
-    return undefined;
+  if (status.kind !== "mined") {
+    if (expired && t.nonce !== null) {
+      // Janela de observação vencida: tenta tirar o tx de circulação antes de estornar.
+      await sendCancel(chain, t.nonce, t.rawTx as Hex);
+    } else if (status.kind === "unknown") {
+      await broadcast(chain, t.rawTx as Hex);
+    }
+    return status.kind === "pending" ? 0n : undefined;
   }
-  if (status.kind === "pending") return 0n;
 
   if (status.confirmations >= deps.config.confirmations) {
     if (status.success) await settleOutbound(deps.db, t.id);
