@@ -111,10 +111,10 @@ Toda tarefa só conta como feita com `npm run lint && npm run typecheck && npm t
 **Arquivos:** `src/components/TransferForm.tsx`, `src/components/TransferStatus.tsx`, `src/app/page.tsx`, `src/components/TransferForm.test.tsx`
 **Tamanho:** M
 
-### [ ] Tarefa 10: Envio wallet → MB no navegador (validação prática da Privy + guarda de rede)
+### [x] Tarefa 10: Envio wallet → MB no navegador (validação prática da Privy + guarda de rede)
 **Descrição:** No sentido de volta, o cliente valida o valor contra o saldo on-chain, codifica `transfer(tesouraria, micro)` com viem e envia via `useSendTransaction` com `showWalletUIs: false`. Guarda de rede: se o `chainId` da wallet não for Sepolia, tenta trocar; se não conseguir, bloqueia com aviso (RNF-01). **Esta tarefa é o teste do risco da Privy.**
 **Aceite:**
-- [ ] Com credenciais, o envio em Sepolia sai sem nenhum pop-up e devolve um hash
+- [ ] Com credenciais, o envio em Sepolia sai sem nenhum pop-up e devolve um hash — **pendente de verificação manual (Tarefa 16)**; a tipagem instalada da Privy (`UnsignedTransactionRequest.data?: string`, `chainId?: number`) confirma que o caminho é suportado, então o plano B não foi implementado
 - [ ] Se o caminho por `data` não funcionar, o plano B (provider EIP-1193 + viem `walletClient`) fica implementado e anotado no plano
 - [ ] Rede diferente de Sepolia → aviso e envio bloqueado
 **Verificação:** manual em Sepolia (precisa de credenciais); `npm test -- src/lib/erc20.test.ts` para a codificação do calldata

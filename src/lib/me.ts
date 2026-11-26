@@ -27,12 +27,19 @@ export function handleMe(req: Request, deps: AppDeps): Promise<Response> {
   return respond(async () => {
     const { identity, account } = await requireAccount(req, deps);
     const address = account.walletAddress as Address | null;
+    const chain = address ? await deps.chain() : null;
     return {
       email: identity.email,
       account: { availableCents: account.availableCents, reservedCents: account.reservedCents },
-      wallet: address
-        ? { address, balanceMicro: await tokenBalance(await deps.chain(), address) }
-        : null,
+      wallet:
+        address && chain
+          ? {
+              address,
+              balanceMicro: await tokenBalance(chain, address),
+              // Destino on-chain da Conta MB para o sentido wallet → MB.
+              mbDepositAddress: chain.treasury.address,
+            }
+          : null,
     };
   });
 }

@@ -1,16 +1,25 @@
 "use client";
 
+import { useSendTransaction } from "@privy-io/react-auth";
 import { useState } from "react";
+import type { Address } from "viem";
+import { sepolia } from "viem/chains";
 import type { Direction } from "@/db/schema";
 import { ApiError, useApi } from "@/lib/api-client";
-import { formatCents, MICRO_PER_CENT, parseAmount } from "@/lib/money";
+import { encodeTransfer } from "@/lib/erc20";
+import { centsToMicro, formatCents, MICRO_PER_CENT, parseAmount } from "@/lib/money";
 import { amountError, DIRECTION_LABEL, errorMessage, truncateInput } from "@/lib/transfer-ui";
 import type { MeView, TransferView } from "@/lib/types";
+import { NetworkWarning, useSepoliaWallet } from "./NetworkGuard";
+
+const TOKEN = process.env.NEXT_PUBLIC_TOKEN_ADDRESS as Address;
 
 type Props = { me: MeView; busy: boolean; onStarted: (t: TransferView) => void };
 
 export function TransferForm({ me, busy, onStarted }: Props) {
   const api = useApi();
+  const { sendTransaction } = useSendTransaction();
+  const { wallet, wrongNetwork, ensureSepolia } = useSepoliaWallet();
   const [direction, setDirection] = useState<Direction>("MB_TO_WALLET");
   const [amount, setAmount] = useState("");
   const [truncated, setTruncated] = useState(false);
@@ -24,7 +33,8 @@ export function TransferForm({ me, busy, onStarted }: Props) {
       ? BigInt(me.account.availableCents)
       : BigInt(me.wallet?.balanceMicro ?? "0") / MICRO_PER_CENT;
   const validation = amountError(amount, available);
-  const canSubmit = !busy && !submitting && parseAmount(amount, available).ok;
+  const parsed = parseAmount(amount, available);
+  const canSubmit = !busy && !submitting && parsed.ok;
 
   function onAmountChange(value: string) {
     const t = truncateInput(value);
@@ -39,9 +49,13 @@ export function TransferForm({ me, busy, onStarted }: Props) {
     setSubmitting(true);
     setError(null);
     try {
+      const body =
+        direction === "MB_TO_WALLET"
+          ? { direction, amount, clientRequestId: requestId }
+          : { direction, txHash: await sendFromWallet(), clientRequestId: requestId };
       const t = await api<TransferView>("/api/transfers", {
         method: "POST",
-        body: JSON.stringify({ direction, amount, clientRequestId: requestId }),
+        body: JSON.stringify(body),
       });
       onStarted(t);
       setAmount("");
@@ -51,6 +65,22 @@ export function TransferForm({ me, busy, onStarted }: Props) {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  /** Wallet → MB: a carteira embutida assina e envia o transfer, sem pop-up (abstração). */
+  async function sendFromWallet(): Promise<string> {
+    if (!parsed.ok || !wallet || !me.wallet) throw new Error("estado inválido");
+    await ensureSepolia();
+    const { hash } = await sendTransaction(
+      {
+        to: TOKEN,
+        data: encodeTransfer(me.wallet.mbDepositAddress as Address, centsToMicro(parsed.cents)),
+        value: 0,
+        chainId: sepolia.id,
+      },
+      { address: wallet.address, uiOptions: { showWalletUIs: false } },
+    );
+    return hash;
   }
 
   return (
@@ -64,7 +94,6 @@ export function TransferForm({ me, busy, onStarted }: Props) {
             role="radio"
             aria-checked={direction === d}
             className={direction === d ? "active" : ""}
-            disabled={d === "WALLET_TO_MB"}
             onClick={() => setDirection(d)}
           >
             {DIRECTION_LABEL[d]}
@@ -84,7 +113,8 @@ export function TransferForm({ me, busy, onStarted }: Props) {
       {truncated && <p className="muted">Use até duas casas decimais.</p>}
       {validation && <p className="error">{validation}</p>}
       {error && <p className="error">{error}</p>}
-      <button type="submit" disabled={!canSubmit}>
+      {wrongNetwork && <NetworkWarning />}
+      <button type="submit" disabled={!canSubmit || (direction === "WALLET_TO_MB" && !wallet)}>
         {submitting ? "Enviando…" : "Transferir"}
       </button>
     </form>

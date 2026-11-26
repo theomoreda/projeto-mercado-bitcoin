@@ -4,7 +4,7 @@ import type { Direction, Status } from "../db/schema.ts";
 export type MeView = {
   email: string;
   account: { availableCents: string; reservedCents: string };
-  wallet: null | { address: string; balanceMicro: string };
+  wallet: null | { address: string; balanceMicro: string; mbDepositAddress: string };
 };
 
 export type TransferView = {
