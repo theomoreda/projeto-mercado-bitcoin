@@ -1,9 +1,9 @@
-import type { Executor } from "../db";
-import type { Account } from "../db/schema";
-import { authenticate, type Identity, type Verifier } from "./auth";
-import type { ServerConfig } from "./config";
-import { HttpError, respond } from "./http";
-import { createAccount } from "./ledger";
+import type { Executor } from "../db/index.ts";
+import type { Account } from "../db/schema.ts";
+import { authenticate, type Identity, type Verifier } from "./auth.ts";
+import type { ServerConfig } from "./config.ts";
+import { HttpError, respond } from "./http.ts";
+import { createAccount } from "./ledger.ts";
 
 export type MeDeps = {
   db: Executor;

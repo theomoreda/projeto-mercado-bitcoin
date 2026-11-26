@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { accounts } from "../../src/db/schema";
-import type { Verifier } from "../../src/lib/auth";
-import { handleMe } from "../../src/lib/me";
-import { db, resetDb } from "./db";
+import { accounts } from "../../src/db/schema.ts";
+import type { Verifier } from "../../src/lib/auth.ts";
+import { handleMe } from "../../src/lib/me.ts";
+import { db, resetDb } from "./db.ts";
 
 const config = { demoEmails: ["demo@inteli.edu.br"], initialCents: 100_000n };
 

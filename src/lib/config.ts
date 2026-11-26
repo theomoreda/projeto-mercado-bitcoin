@@ -1,4 +1,4 @@
-import { parseAmount } from "./money";
+import { parseAmount } from "./money.ts";
 
 /** Configuração do servidor (variáveis de ambiente), lida sob demanda. */
 export function serverConfig() {

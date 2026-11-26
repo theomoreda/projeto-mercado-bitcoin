@@ -4,9 +4,9 @@
  * saldo no máximo uma vez. As garantias finais ficam no banco (CHECK e UNIQUE).
  */
 import { and, eq, sql } from "drizzle-orm";
-import type { Executor, Tx } from "../db";
-import { accounts, transfers, type Account, type Transfer } from "../db/schema";
-import { centsToMicro, MICRO_PER_CENT, type Cents, type Micro } from "./money";
+import type { Executor, Tx } from "../db/index.ts";
+import { accounts, transfers, type Account, type Transfer } from "../db/schema.ts";
+import { centsToMicro, MICRO_PER_CENT, type Cents, type Micro } from "./money.ts";
 
 const UNIQUE_VIOLATION = "23505";
 

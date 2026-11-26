@@ -2,6 +2,7 @@
   "name": "mb-wallet-bridge",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -12,7 +13,8 @@
     "test": "vitest run --passWithNoTests",
     "test:integration": "vitest run --config vitest.integration.config.mts --passWithNoTests",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "seed": "node scripts/seed.ts"
   },
   "dependencies": {
     "@privy-io/node": "^0.42.0",

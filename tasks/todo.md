@@ -69,7 +69,7 @@ Toda tarefa só conta como feita com `npm run lint && npm run typecheck && npm t
 
 ## Fase 2 — Semana 2: carteira e MB → wallet
 
-### [ ] Tarefa 6: Módulo de cadeia, harness Anvil e seed da tesouraria
+### [x] Tarefa 6: Módulo de cadeia, harness Anvil e seed da tesouraria
 **Descrição:** `chain.ts` (viem) com: assinar `transfer` da tesouraria (devolve `hash`, `nonce`, `rawTx`), transmitir `rawTx`, ler recibo com nº de confirmações, ler saldo do token, consultar o nonce já consumido e ler logs `Transfer`. Harness de teste que sobe o Anvil, implanta o `MockUSDC` e expõe os clientes. `scripts/seed.ts` faz o mint para a tesouraria.
 **Aceite:**
 - [ ] O hash calculado antes do broadcast é igual ao hash do recibo

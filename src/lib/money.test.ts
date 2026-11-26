@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { centsToMicro, formatCents, formatMicro, parseAmount, splitMicro } from "./money";
+import { centsToMicro, formatCents, formatMicro, parseAmount, splitMicro } from "./money.ts";
 
 describe("parseAmount", () => {
   const saldo = 100_000n; // 1.000,00

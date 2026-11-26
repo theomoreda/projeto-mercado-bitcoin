@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
-import { accounts, transfers } from "../../src/db/schema";
+import { accounts, transfers } from "../../src/db/schema.ts";
 import {
   confirmInbound,
   createAccount,
@@ -11,8 +11,8 @@ import {
   recordInbound,
   refundOutbound,
   settleOutbound,
-} from "../../src/lib/ledger";
-import { db, resetDb } from "./db";
+} from "../../src/lib/ledger.ts";
+import { db, resetDb } from "./db.ts";
 
 const INITIAL = 100_000n; // 1.000,00
 const hash = () => `0x${randomUUID().replaceAll("-", "").padEnd(64, "0")}`;

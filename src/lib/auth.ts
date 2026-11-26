@@ -1,5 +1,5 @@
 import { PrivyClient } from "@privy-io/node";
-import { HttpError } from "./http";
+import { HttpError } from "./http.ts";
 
 export type Identity = { privyUserId: string; email: string | null };
 /** Valida um access token Privy e devolve quem é o usuário. Lança se inválido. */

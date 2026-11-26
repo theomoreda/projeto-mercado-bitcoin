@@ -56,7 +56,7 @@ scaffold (1)
 **Checkpoint 1:** lint, typecheck, unit e integração de ledger verdes; `forge test` verde; com credenciais Privy, o login abre o painel com `1.000,00 USDC` na Conta MB.
 
 ### Fase 2 — Semana 2: carteira e MB → wallet
-- [ ] Tarefa 6: Módulo de cadeia, harness Anvil e seed da tesouraria
+- [x] Tarefa 6: Módulo de cadeia, harness Anvil e seed da tesouraria
 - [ ] Tarefa 7: Ativar carteira e ver saldo on-chain
 - [ ] Tarefa 8: Transferência MB → wallet (API + confirmação + estorno)
 - [ ] Tarefa 9: Tela de transferência e status da operação

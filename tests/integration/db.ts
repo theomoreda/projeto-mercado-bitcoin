@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { createDb } from "../../src/db";
+import { createDb } from "../../src/db/index.ts";
 
 export const db = createDb(process.env.DATABASE_URL!);
 
