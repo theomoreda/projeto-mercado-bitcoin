@@ -29,7 +29,7 @@ Toda tarefa só conta como feita com `npm run lint && npm run typecheck && npm t
 **Arquivos:** `src/lib/money.ts`, `src/lib/money.test.ts`, `eslint.config.mjs`
 **Tamanho:** S
 
-### [ ] Tarefa 3: Contrato `MockUSDC` com testes e script de deploy
+### [x] Tarefa 3: Contrato `MockUSDC` com testes e script de deploy
 **Descrição:** Projeto Foundry em `contracts/` com um ERC-20 OpenZeppelin de 6 casas, `mint` restrito ao owner (a tesouraria) e o script `Deploy.s.sol`.
 **Aceite:**
 - [ ] `decimals() == 6`; `mint` por não-owner reverte; `transfer` padrão funciona
