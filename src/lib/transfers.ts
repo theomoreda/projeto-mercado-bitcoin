@@ -3,18 +3,28 @@
  * "preguiçosa": `advance()` roda quando a tela consulta o status, sem worker.
  */
 import { and, eq, max, sql } from "drizzle-orm";
-import type { Address, Hex } from "viem";
-import { transfers, type Account, type Transfer } from "../db/schema.ts";
+import { getAddress, isAddressEqual, type Address, type Hex } from "viem";
+import { accounts, transfers, type Account, type Transfer } from "../db/schema.ts";
 import {
   broadcast,
+  findTransaction,
   getTxStatus,
+  inboundAmountFromLogs,
   isNonceConsumed,
   signTreasuryTransfer,
   type ChainCtx,
 } from "./chain.ts";
 import type { AppDeps } from "./deps.ts";
 import { HttpError, respond } from "./http.ts";
-import { createOutbound, refundOutbound, settleOutbound } from "./ledger.ts";
+import { decodeTransfer } from "./erc20.ts";
+import {
+  confirmInbound,
+  createOutbound,
+  failInbound,
+  recordInbound,
+  refundOutbound,
+  settleOutbound,
+} from "./ledger.ts";
 import { requireAccount } from "./me.ts";
 import { parseAmount } from "./money.ts";
 
@@ -32,7 +42,12 @@ const view = (t: Transfer, confirmations?: bigint) => ({
   createdAt: t.createdAt,
 });
 
-type CreateBody = { direction?: unknown; amount?: unknown; clientRequestId?: unknown };
+type CreateBody = {
+  direction?: unknown;
+  amount?: unknown;
+  txHash?: unknown;
+  clientRequestId?: unknown;
+};
 
 /** POST /api/transfers */
 export function handleCreateTransfer(req: Request, deps: AppDeps): Promise<Response> {
@@ -47,8 +62,56 @@ export function handleCreateTransfer(req: Request, deps: AppDeps): Promise<Respo
         await startOutbound(deps, account, String(body.amount ?? ""), body.clientRequestId),
       );
     }
+    if (body.direction === "WALLET_TO_MB") {
+      return view(await startInbound(deps, account, body.txHash, body.clientRequestId));
+    }
     throw new HttpError(400, "pedido_invalido");
   });
+}
+
+/**
+ * Wallet → MB: registra o tx que a carteira embutida enviou. Só aceita um tx visível
+ * na rede, da carteira desta conta, para a Conta MB — senão alguém poderia registrar
+ * antes o hash de outra pessoa e bloquear o crédito dela (o hash é único).
+ */
+async function startInbound(
+  deps: AppDeps,
+  account: Account,
+  txHash: unknown,
+  clientRequestId: string,
+) {
+  const wallet = account.walletAddress as Address | null;
+  if (!wallet) throw new HttpError(409, "carteira_nao_ativada");
+  if (typeof txHash !== "string" || !/^0x[0-9a-fA-F]{64}$/.test(txHash)) {
+    throw new HttpError(400, "pedido_invalido");
+  }
+  const hash = txHash.toLowerCase() as Hex;
+  const chain = await deps.chain();
+  const tx = await findTransaction(chain, hash);
+  if (!tx) throw new HttpError(409, "transacao_nao_encontrada");
+  const call = decodeTransfer(tx.input);
+  const valid =
+    isAddressEqual(tx.from, wallet) &&
+    tx.to !== null &&
+    isAddressEqual(tx.to, chain.token) &&
+    call !== null &&
+    isAddressEqual(call.to, chain.treasury.address);
+  if (!valid) throw new HttpError(422, "transacao_invalida");
+
+  const recorded = await recordInbound(deps.db, {
+    accountId: account.id,
+    txHash: hash,
+    amountMicro: call.amountMicro,
+    clientRequestId,
+    expiresAt: new Date(Date.now() + deps.config.observationWindowMs),
+  });
+  if (recorded) return recorded;
+  // clientRequestId já usado por outra transferência: devolve aquela.
+  const [byRequest] = await deps.db
+    .select()
+    .from(transfers)
+    .where(eq(transfers.clientRequestId, clientRequestId));
+  return byRequest;
 }
 
 async function startOutbound(
@@ -126,7 +189,44 @@ export async function advance(
   t: Transfer,
 ): Promise<bigint | undefined> {
   if (t.direction === "MB_TO_WALLET") return advanceOutbound(deps, chain, t);
-  return undefined;
+  const [account] = await deps.db.select().from(accounts).where(eq(accounts.id, t.accountId));
+  return creditInbound(deps, chain, account, t.txHash as Hex, t.expiresAt);
+}
+
+/**
+ * Única função que credita wallet → MB (SPEC.md › Fluxo wallet → MB). Chamada pelo
+ * aviso do cliente (via advance) e pela varredura de logs. O valor creditado vem do
+ * evento Transfer do recibo, nunca do cliente; o UNIQUE de tx_hash impede crédito duplo.
+ */
+export async function creditInbound(
+  deps: AppDeps,
+  chain: ChainCtx,
+  account: Pick<Account, "id" | "walletAddress">,
+  txHash: Hex,
+  expiresAt?: Date | null,
+): Promise<bigint | undefined> {
+  const status = await getTxStatus(chain, txHash);
+  if (status.kind === "unknown") {
+    if (expiresAt && expiresAt < new Date()) {
+      await failInbound(deps.db, txHash, "transacao_nao_encontrada");
+    }
+    return undefined;
+  }
+  if (status.kind === "pending") return 0n;
+  if (status.confirmations < deps.config.confirmations) return status.confirmations;
+
+  if (!status.success) {
+    await failInbound(deps.db, txHash, "transacao_revertida");
+    return status.confirmations;
+  }
+  const amountMicro = inboundAmountFromLogs(
+    chain,
+    status.logs,
+    getAddress(account.walletAddress as Address),
+  );
+  if (amountMicro === 0n) await failInbound(deps.db, txHash, "transferencia_invalida");
+  else await confirmInbound(deps.db, { accountId: account.id, txHash, amountMicro });
+  return status.confirmations;
 }
 
 async function advanceOutbound(deps: AppDeps, chain: ChainCtx, t: Transfer) {

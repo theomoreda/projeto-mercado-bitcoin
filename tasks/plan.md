@@ -65,7 +65,7 @@ scaffold (1)
 **Checkpoint 2:** MB → wallet completo no Anvil (confirma e estorna); com credenciais, ativação e MB → wallet em Sepolia; o envio silencioso de ERC-20 pela Privy está comprovado ou há um plano B decidido.
 
 ### Fase 3 — Semana 3: wallet → MB, idempotência e reconciliação
-- [ ] Tarefa 11: Crédito wallet → MB após confirmação
+- [x] Tarefa 11: Crédito wallet → MB após confirmação
 - [ ] Tarefa 12: Varredura de recuperação de entradas
 - [ ] Tarefa 13: Transação presa: cancelamento e estorno seguro
 - [ ] Tarefa 14: Reconciliação

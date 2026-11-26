@@ -164,8 +164,14 @@ export async function refundOutbound(
 /** Wallet → MB enviado: registra PROCESSANDO (sem crédito). Idempotente por hash. */
 export async function recordInbound(
   db: Executor,
-  input: { accountId: string; txHash: string; amountMicro: Micro; clientRequestId?: string },
-): Promise<Transfer> {
+  input: {
+    accountId: string;
+    txHash: string;
+    amountMicro: Micro;
+    clientRequestId?: string;
+    expiresAt?: Date;
+  },
+): Promise<Transfer | undefined> {
   await db
     .insert(transfers)
     .values({ ...input, direction: "WALLET_TO_MB" })

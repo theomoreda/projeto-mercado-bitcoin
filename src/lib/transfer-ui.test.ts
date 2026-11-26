@@ -61,5 +61,6 @@ describe("errorMessage", () => {
       "Não foi possível concluir agora. Tente novamente em instantes.",
     );
     expect(errorMessage("qualquer_coisa")).toBe("Algo deu errado. Tente novamente.");
+    expect(errorMessage("transacao_nao_encontrada")).toMatch(/atualizado em instantes/);
   });
 });

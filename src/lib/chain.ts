@@ -8,7 +8,9 @@ import {
   erc20Abi,
   http,
   keccak256,
+  isAddressEqual,
   parseAbi,
+  parseEventLogs,
   TransactionNotFoundError,
   TransactionReceiptNotFoundError,
   type Address,
@@ -148,6 +150,39 @@ export async function getTxStatus(ctx: ChainCtx, hash: Hex): Promise<TxStatus> {
     if (err instanceof TransactionNotFoundError) return { kind: "unknown" };
     throw err;
   }
+}
+
+/**
+ * Busca um tx na rede (mempool ou minerado). Tenta algumas vezes: o nó usado pelo
+ * servidor pode ainda não ter visto um tx recém-enviado pela carteira do usuário.
+ */
+export async function findTransaction(
+  ctx: ChainCtx,
+  hash: Hex,
+  { attempts = 5, delayMs = 1_000 } = {},
+): Promise<{ from: Address; to: Address | null; input: Hex } | null> {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const tx = await ctx.publicClient.getTransaction({ hash });
+      return { from: tx.from, to: tx.to, input: tx.input };
+    } catch (err) {
+      if (!(err instanceof TransactionNotFoundError)) throw err;
+      if (i < attempts - 1) await new Promise((r) => setTimeout(r, delayMs));
+    }
+  }
+  return null;
+}
+
+/** Valor dos eventos Transfer do token `from` → tesouraria num recibo (0 se não houver). */
+export function inboundAmountFromLogs(ctx: ChainCtx, logs: Log[], from: Address): bigint {
+  return parseEventLogs({ abi: erc20Abi, eventName: "Transfer", logs })
+    .filter(
+      (l) =>
+        isAddressEqual(l.address, ctx.token) &&
+        isAddressEqual(l.args.from, from) &&
+        isAddressEqual(l.args.to, ctx.treasury.address),
+    )
+    .reduce((sum, l) => sum + l.args.value, 0n);
 }
 
 /** O nonce da tesouraria já foi usado por um tx minerado (o nosso ou um substituto)? */

@@ -131,7 +131,7 @@ Toda tarefa só conta como feita com `npm run lint && npm run typecheck && npm t
 
 ## Fase 3 — Semana 3: volta, idempotência e reconciliação
 
-### [ ] Tarefa 11: Crédito wallet → MB após confirmação
+### [x] Tarefa 11: Crédito wallet → MB após confirmação
 **Descrição:** `POST /api/transfers` para `WALLET_TO_MB` recebe `{ txHash, clientRequestId }` e cria o registro `PROCESSANDO`. `creditInbound(txHash)` espera `CONFIRMATIONS`, exige um `Transfer` do `MockUSDC` com `from` = wallet da conta e `to` = tesouraria, e credita o valor do evento com a regra do excedente. Revertido → `FALHOU`, sem mexer no ledger. A tela do passo 10 envia o hash e reaproveita o componente de status.
 **Aceite:**
 - [ ] Nada é creditado antes de `CONFIRMATIONS`; depois, o crédito acontece uma vez só, mesmo com o mesmo hash enviado de novo

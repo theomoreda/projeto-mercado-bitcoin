@@ -29,6 +29,8 @@ const API_MESSAGES: Record<string, string> = {
   servico_indisponivel: "Não foi possível concluir agora. Tente novamente em instantes.",
   carteira_nao_ativada: "Ative sua carteira antes de transferir.",
   rede_incorreta: "Sua carteira está em uma rede diferente. Recarregue a página.",
+  // O envio saiu da carteira; a varredura credita assim que o servidor enxergar o tx.
+  transacao_nao_encontrada: "Recebemos sua transferência. O saldo será atualizado em instantes.",
 };
 
 export function errorMessage(code: string): string {
