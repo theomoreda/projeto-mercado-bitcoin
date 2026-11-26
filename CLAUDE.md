@@ -2,14 +2,28 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Repository state
+## Source documents and workflow
 
-No application code exists yet. The repo currently holds only the source documents for the project:
-
-- `TAP_-_Inteli_Blockchain_e_Mercado_Bitcoin_-_MB_Wallet_Bridge.md` — **the binding project charter** (scope, requirements, acceptance criteria, schedule). When it conflicts with anything else, the TAP wins.
+- `SPEC.md` — approved V1 spec (architecture, data model, flows, boundaries). `tasks/plan.md` + `tasks/todo.md` — the task plan; work proceeds one task at a time with the agent-skills `/build` workflow (test first, one commit per task, tick the task in `tasks/todo.md`).
+- `TAP_-_Inteli_Blockchain_e_Mercado_Bitcoin_-_MB_Wallet_Bridge.md` — **the binding project charter**. When it conflicts with anything else, the TAP wins.
 - `Guia_de_estudo_-_deposito_e_saque_de_cripto_numa_exchange.md` (+ `guia_arquitetura_de_referencia.png`) — a generic study guide on exchange deposit/withdrawal architecture. It is background reading and covers more than this project does (KYC, Travel Rule, HD wallets, multiple chains, sending to external addresses, hot/cold custody). Those parts are **out of scope** under the TAP; don't build them because the guide mentions them.
 
-There are no build, lint or test commands yet. When the code is scaffolded, add those commands to this file.
+## Commands
+
+```bash
+docker compose up -d --wait db      # Postgres 16 on 127.0.0.1:5433 (5432 is taken on the dev machine)
+npm run dev
+npm run lint
+npm run typecheck                   # runs `next typegen` first (LayoutProps etc. are generated globals)
+npm test                            # unit: src/**/*.test.ts(x)
+npm test -- src/lib/money.test.ts   # single file; add -t "name" for a single test
+npm run test:integration            # tests/integration/**, Postgres + Anvil, files run serially
+npm run build
+```
+
+Use `127.0.0.1`, not `localhost`, for local services: `localhost` resolves to `::1` here and Docker binds IPv4 only.
+
+**Next.js is 16.x** (see `AGENTS.md`): APIs differ from older versions. Read the relevant guide in `node_modules/next/dist/docs/` before writing routes, config or data fetching.
 
 ## What is being built
 

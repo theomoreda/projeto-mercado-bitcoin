@@ -7,7 +7,7 @@ Toda tarefa só conta como feita com `npm run lint && npm run typecheck && npm t
 
 ## Fase 1 — Semana 1: fundação
 
-### [ ] Tarefa 1: Scaffold do projeto e infraestrutura local
+### [x] Tarefa 1: Scaffold do projeto e infraestrutura local
 **Descrição:** Criar o app Next.js (App Router, TS strict) com ESLint + Prettier e Vitest, o Postgres no `docker-compose.yml`, o `.env.example` com todas as variáveis da spec, a licença MIT, o `.gitignore` (que bloqueia `.env*` menos o exemplo) e um README mínimo com a seção "Credenciais", para as contas Privy/RPC/tesouraria poderem ser criadas em paralelo.
 **Aceite:**
 - [ ] `npm run dev` abre uma página inicial vazia em pt-BR
