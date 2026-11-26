@@ -39,7 +39,7 @@ Toda tarefa só conta como feita com `npm run lint && npm run typecheck && npm t
 **Arquivos:** `contracts/foundry.toml`, `contracts/src/MockUSDC.sol`, `contracts/test/MockUSDC.t.sol`, `contracts/script/Deploy.s.sol`
 **Tamanho:** S
 
-### [ ] Tarefa 4: Schema e ledger atômico
+### [x] Tarefa 4: Schema e ledger atômico
 **Descrição:** Schema Drizzle de `accounts` e `transfers`, conforme a spec (CHECKs e UNIQUEs), com migração. `ledger.ts` com `reserve`, `settle`, `refund` e `credit` (regra do excedente), todas atômicas e condicionadas a `status = 'PROCESSANDO'`. Testes de integração contra o Postgres real.
 **Aceite:**
 - [ ] Dois `reserve` simultâneos com saldo para um só → exatamente um passa
