@@ -25,6 +25,17 @@ Use `127.0.0.1`, not `localhost`, for local services: `localhost` resolves to `:
 
 **Next.js is 16.x** (see `AGENTS.md`): APIs differ from older versions. Read the relevant guide in `node_modules/next/dist/docs/` before writing routes, config or data fetching.
 
+## Code map and conventions
+
+See `docs/ARCHITECTURE.md` for flows, the state machine and the decision table. The essentials:
+
+- `src/lib/chain.ts` is the only module that talks to the network. `ledger.ts` is the only one that changes balances. `transfers.ts` orchestrates both (`advance()`, `creditInbound()`, `scanInbound()`). `src/app/api/*/route.ts` files are thin wrappers that call `handleX(req, appDeps())`.
+- Handlers take an `AppDeps` object (`src/lib/deps.ts`); integration tests inject fakes through `tests/integration/deps.ts` (`makeDeps`, token `tok-<id>`).
+- The project is ESM. Inside `src/lib`, `src/db`, `scripts` and `tests`, relative imports use explicit `.ts` extensions so `scripts/*.ts` run directly on Node's native type stripping (`node scripts/x.ts`, no tsx). For the same reason, don't use TS parameter properties or enums there. `@/` aliases are only for `src/app` and `src/components`.
+- Integration tests each start their own Anvil on a fixed port (8547–8554; pick a new one for a new file) and deploy MockUSDC from `contracts/out` (the global setup runs `forge build`). They use the `mb_wallet_bridge_test` database. With viem in tests, read blocks with `getBlockNumber({ cacheTime: 0 })`: the cached value goes stale.
+- Screen logic lives in `src/lib/transfer-ui.ts` and is unit tested; there are no DOM/React test dependencies (adding them is an "ask first" change).
+- When piping check output (`npm run typecheck | tail`), use `set -o pipefail`, or a failure gets masked.
+
 ## What is being built
 
 **MB Wallet Bridge**: an academic PoC (Inteli Blockchain × Mercado Bitcoin) of a hybrid wallet. A demo account logs in by email + code (no password, no seed phrase), sees a **simulated custodial MB balance** (off-chain ledger), activates a **Privy embedded wallet on Sepolia**, and moves **Mock USDC** both ways between the ledger and the wallet. Each transfer shows its state (processing / confirmed / failed) and a Sepolia explorer link. The demo wallet is pre-funded with faucet Sepolia ETH (no gas sponsorship).
