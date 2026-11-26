@@ -180,7 +180,7 @@ Toda tarefa só conta como feita com `npm run lint && npm run typecheck && npm t
 
 ## Fase 4 — Semana 4: testes do fluxo, docs e entrega (até 27/11, 23h59)
 
-### [ ] Tarefa 15: Documentação
+### [x] Tarefa 15: Documentação
 **Descrição:** README completo (pré-requisitos, credenciais Privy/RPC/faucet/tesouraria passo a passo, deploy do contrato, seed, execução, testes). `docs/ARCHITECTURE.md` (diagrama, fluxos, estados, decisões). `docs/SECURITY.md` (chave da tesouraria, confirmações e reorg, idempotência, o que não é seguro para produção, próximos passos do guia: KYC/KYT, Travel Rule, HSM/MPC). `docs/DEMO.md` (roteiro do Demo Day passo a passo).
 **Aceite:**
 - [ ] Uma pessoa sobe o projeto do zero numa pasta limpa seguindo só o README (RNF-07)

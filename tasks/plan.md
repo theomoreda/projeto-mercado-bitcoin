@@ -73,7 +73,7 @@ scaffold (1)
 **Checkpoint 3:** ida e volta no Anvil com `npm run reconcile` = 0; todos os testes de idempotência verdes; revisão humana antes da fase final.
 
 ### Fase 4 — Semana 4: testes do fluxo, docs e entrega (até 27/11, 23h59)
-- [ ] Tarefa 15: Documentação (README, ARCHITECTURE, SECURITY, DEMO)
+- [x] Tarefa 15: Documentação (README, ARCHITECTURE, SECURITY, DEMO)
 - [ ] Tarefa 16: Aceite em Sepolia e polimento de UX
 
 **Checkpoint final:** todos os Success Criteria da spec marcados; projeto sobe do zero seguindo o README; congelamento.
