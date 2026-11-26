@@ -26,7 +26,7 @@ describe("POST /api/wallet", () => {
     expect(await res.json()).toEqual({ error: "carteira_nao_criada" });
   });
 
-  it("registra a carteira da Privy (não a do cliente) e marca o bloco atual para a varredura", async () => {
+  it("registra a carteira da Privy (não a do cliente) e marca o bloco seguinte para a varredura", async () => {
     users.demo.wallet = WALLET;
     const block = await c.pub.getBlockNumber({ cacheTime: 0 });
     const res = await handleActivateWallet(
@@ -34,7 +34,10 @@ describe("POST /api/wallet", () => {
       deps(),
     );
     expect(res.status).toBe(200);
-    expect(await res.json()).toMatchObject({ address: WALLET, lastScannedBlock: String(block) });
+    expect(await res.json()).toMatchObject({
+      address: WALLET,
+      lastScannedBlock: String(block + 1n),
+    });
   });
 
   it("ativar duas vezes é idempotente", async () => {

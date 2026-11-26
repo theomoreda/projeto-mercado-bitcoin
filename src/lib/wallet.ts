@@ -16,12 +16,13 @@ export function handleActivateWallet(req: Request, deps: AppDeps): Promise<Respo
     if (account.walletAddress === address) return view(account);
     if (account.walletAddress) throw new HttpError(409, "carteira_ja_ativada");
 
-    // A varredura de entradas começa no bloco da ativação, nunca do zero.
+    // A varredura de entradas começa no bloco seguinte à ativação (o que já está
+    // minerado é anterior a ela), nunca do zero.
     const block = await (await deps.chain()).publicClient.getBlockNumber({ cacheTime: 0 });
     try {
       const [updated] = await deps.db
         .update(accounts)
-        .set({ walletAddress: address, lastScannedBlock: block })
+        .set({ walletAddress: address, lastScannedBlock: block + 1n })
         .where(and(eq(accounts.id, account.id), isNull(accounts.walletAddress)))
         .returning();
       if (updated) return view(updated);

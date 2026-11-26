@@ -162,7 +162,7 @@ Toda tarefa só conta como feita com `npm run lint && npm run typecheck && npm t
 **Arquivos:** `src/lib/transfers.ts`, `src/lib/chain.ts`, `tests/integration/stuck.test.ts`
 **Tamanho:** S
 
-### [ ] Tarefa 14: Reconciliação
+### [x] Tarefa 14: Reconciliação
 **Descrição:** `scripts/reconcile.ts` e `GET /api/reconciliation` calculam a invariante por conta e a da tesouraria (com entradas em trânsito), conforme a spec. O script sai com código ≠ 0 se houver diferença fora de trânsito.
 **Aceite:**
 - [ ] Depois de ida e volta no Anvil, `npm run reconcile` sai com 0

@@ -19,7 +19,11 @@ const deps = () => makeDeps({ demo: { email: "demo@x.com", wallet: WALLET } }, c
 /** Envia Mock USDC da wallet do usuário (como faria a carteira embutida no navegador). */
 async function walletSend(to: Address, amount: bigint, opts: { gas?: bigint; key?: Hex } = {}) {
   const signer = opts.key
-    ? createWalletClient({ account: privateKeyToAccount(opts.key), chain: foundry, transport: http(c.rpcUrl) })
+    ? createWalletClient({
+        account: privateKeyToAccount(opts.key),
+        chain: foundry,
+        transport: http(c.rpcUrl),
+      })
     : c.user;
   return signer.writeContract({
     address: c.token,
@@ -31,7 +35,12 @@ async function walletSend(to: Address, amount: bigint, opts: { gas?: bigint; key
 }
 const notify = (txHash: string, clientRequestId: string = randomUUID()) =>
   handleCreateTransfer(
-    req("/api/transfers", "tok-demo", { direction: "WALLET_TO_MB", txHash, amount: "0", clientRequestId }),
+    req("/api/transfers", "tok-demo", {
+      direction: "WALLET_TO_MB",
+      txHash,
+      amount: "0",
+      clientRequestId,
+    }),
     deps(),
   );
 const status = async (id: string) =>
@@ -62,7 +71,11 @@ describe("POST /api/transfers WALLET_TO_MB", () => {
     const res = await notify(hash);
     expect(res.status).toBe(200);
     const t = await res.json();
-    expect(t).toMatchObject({ direction: "WALLET_TO_MB", status: "PROCESSANDO", amountMicro: "5000000" });
+    expect(t).toMatchObject({
+      direction: "WALLET_TO_MB",
+      status: "PROCESSANDO",
+      amountMicro: "5000000",
+    });
     const before = (await account()).availableCents;
 
     expect(await status(t.id)).toMatchObject({ status: "PROCESSANDO" }); // 1 confirmação
@@ -90,7 +103,10 @@ describe("POST /api/transfers WALLET_TO_MB", () => {
     const hash = await walletSend(c.ctx.treasury.address, 999_000_000n, { gas: 100_000n });
     const t = await (await notify(hash)).json();
     await c.mine(1);
-    expect(await status(t.id)).toMatchObject({ status: "FALHOU", failureReason: "transacao_revertida" });
+    expect(await status(t.id)).toMatchObject({
+      status: "FALHOU",
+      failureReason: "transacao_revertida",
+    });
     await expectInvariant();
   });
 

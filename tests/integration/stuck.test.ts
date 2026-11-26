@@ -15,14 +15,21 @@ const deps = () => makeDeps({ demo: { email: "demo@x.com", wallet: WALLET } }, c
 const send = async (amount: string) =>
   (
     await handleCreateTransfer(
-      req("/api/transfers", "tok-demo", { direction: "MB_TO_WALLET", amount, clientRequestId: randomUUID() }),
+      req("/api/transfers", "tok-demo", {
+        direction: "MB_TO_WALLET",
+        amount,
+        clientRequestId: randomUUID(),
+      }),
       deps(),
     )
   ).json();
 const status = async (id: string) =>
   (await handleGetTransfer(req(`/api/transfers/${id}`, "tok-demo"), deps(), id)).json();
 const expire = (id: string) =>
-  db.update(transfers).set({ expiresAt: new Date(Date.now() - 1_000) }).where(eq(transfers.id, id));
+  db
+    .update(transfers)
+    .set({ expiresAt: new Date(Date.now() - 1_000) })
+    .where(eq(transfers.id, id));
 const account = async () => (await db.select().from(accounts))[0];
 
 beforeAll(async () => {
@@ -47,7 +54,10 @@ describe("transação presa após a janela de observação", () => {
     expect((await account()).reservedCents).toBe(700n); // nada estornado ainda
 
     await c.mine(2); // minera o cancelamento (taxa maior substitui o original)
-    expect(await status(t.id)).toMatchObject({ status: "FALHOU", failureReason: "transacao_expirada" });
+    expect(await status(t.id)).toMatchObject({
+      status: "FALHOU",
+      failureReason: "transacao_expirada",
+    });
     expect(await status(t.id)).toMatchObject({ status: "FALHOU" });
 
     const a = await account();
@@ -67,8 +77,14 @@ describe("transação presa após a janela de observação", () => {
   it("antes de expirar, um tx pendente só espera (sem cancelamento)", async () => {
     const t = await send("1");
     expect(await status(t.id)).toMatchObject({ status: "PROCESSANDO" });
-    const pending = await c.pub.getTransactionCount({ address: c.ctx.treasury.address, blockTag: "pending" });
-    const mined = await c.pub.getTransactionCount({ address: c.ctx.treasury.address, blockTag: "latest" });
+    const pending = await c.pub.getTransactionCount({
+      address: c.ctx.treasury.address,
+      blockTag: "pending",
+    });
+    const mined = await c.pub.getTransactionCount({
+      address: c.ctx.treasury.address,
+      blockTag: "latest",
+    });
     expect(pending - mined).toBe(1); // só o original no mempool
     await c.mine(2);
     expect(await status(t.id)).toMatchObject({ status: "CONFIRMADA" });

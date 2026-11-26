@@ -14,7 +14,8 @@
     "test:integration": "vitest run --config vitest.integration.config.mts --passWithNoTests",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "seed": "node scripts/seed.ts"
+    "seed": "node scripts/seed.ts",
+    "reconcile": "node scripts/reconcile.ts"
   },
   "dependencies": {
     "@privy-io/node": "^0.42.0",

@@ -68,7 +68,7 @@ scaffold (1)
 - [x] Tarefa 11: Crédito wallet → MB após confirmação
 - [x] Tarefa 12: Varredura de recuperação de entradas
 - [x] Tarefa 13: Transação presa: cancelamento e estorno seguro
-- [ ] Tarefa 14: Reconciliação
+- [x] Tarefa 14: Reconciliação
 
 **Checkpoint 3:** ida e volta no Anvil com `npm run reconcile` = 0; todos os testes de idempotência verdes; revisão humana antes da fase final.
 

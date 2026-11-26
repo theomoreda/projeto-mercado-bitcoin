@@ -5,7 +5,10 @@ import {
   createPublicClient,
   createTestClient,
   createWalletClient,
+  encodeAbiParameters,
   http,
+  keccak256,
+  numberToHex,
   parseAbi,
   type Address,
   type Hex,
@@ -82,6 +85,17 @@ export async function startChain(port: number) {
       await pub.waitForTransactionReceipt({ hash });
     },
     mine: (blocks: number) => testClient.mine({ blocks }),
+    /** Fixa o saldo de Mock USDC direto no storage (OZ ERC20: mapping de saldos no slot 0). */
+    async setTokenBalance(owner: Address, amount: bigint) {
+      const slot = keccak256(
+        encodeAbiParameters([{ type: "address" }, { type: "uint256" }], [owner, 0n]),
+      );
+      await testClient.setStorageAt({
+        address: token,
+        index: slot,
+        value: numberToHex(amount, { size: 32 }),
+      });
+    },
     stop: () => proc.kill(),
   };
 }

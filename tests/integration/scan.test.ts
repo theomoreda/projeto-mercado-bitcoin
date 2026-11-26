@@ -64,7 +64,11 @@ describe("varredura de entradas no GET /api/me", () => {
   it("aviso do cliente + varredura → um crédito só", async () => {
     const hash = await sendToMb(1_000_000n);
     await handleCreateTransfer(
-      req("/api/transfers", "tok-demo", { direction: "WALLET_TO_MB", txHash: hash, clientRequestId: "req-12345678" }),
+      req("/api/transfers", "tok-demo", {
+        direction: "WALLET_TO_MB",
+        txHash: hash,
+        clientRequestId: "req-12345678",
+      }),
       deps(),
     );
     await c.mine(1);
