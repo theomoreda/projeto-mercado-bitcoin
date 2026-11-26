@@ -61,7 +61,7 @@ describe("reconcile", () => {
     const r = await reconcile(deps());
     expect(r.ok).toBe(true);
     expect(r.accounts[0]).toMatchObject({ diffMicro: 0n, inTransitMicro: 0n });
-    expect(r.treasury.diffMicro).toBe(0n);
+    expect(r.treasury?.diffMicro).toBe(0n);
     expect((await db.select().from(accounts))[0].availableCents).toBe(100_000n - 10_000n + 4_012n);
   });
 
@@ -81,7 +81,7 @@ describe("reconcile", () => {
     const r = await reconcile(deps());
     expect(r.ok).toBe(true);
     expect(r.accounts[0].inTransitMicro).toBe(3_000_000n - 10_000_000n);
-    expect(r.treasury.diffMicro).toBe(0n);
+    expect(r.treasury?.diffMicro).toBe(0n);
   });
 
   it("diferença forçada no ledger vira alerta", async () => {
@@ -89,7 +89,7 @@ describe("reconcile", () => {
     const r = await reconcile(deps());
     expect(r.ok).toBe(false);
     expect(r.accounts[0].diffMicro).toBe(10_000n);
-    expect(r.treasury.diffMicro).toBe(-10_000n);
+    expect(r.treasury?.diffMicro).toBe(-10_000n);
   });
 
   it("npm run reconcile sai com 0 quando fecha e ≠ 0 quando há diferença", async () => {
