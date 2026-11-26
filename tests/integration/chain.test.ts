@@ -86,7 +86,12 @@ describe("wallet → tesouraria", () => {
       args: [c.ctx.treasury.address, 1_234_567n],
     });
     await c.pub.waitForTransactionReceipt({ hash });
-    const found = await findInboundTransfers(c.ctx, USER, from, await c.pub.getBlockNumber({ cacheTime: 0 }));
+    const found = await findInboundTransfers(
+      c.ctx,
+      USER,
+      from,
+      await c.pub.getBlockNumber({ cacheTime: 0 }),
+    );
     expect(found).toEqual([{ txHash: hash, amountMicro: 1_234_567n }]);
   });
 });

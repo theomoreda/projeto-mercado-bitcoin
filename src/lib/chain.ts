@@ -64,26 +64,35 @@ export async function signTreasuryTransfer(
   ctx: ChainCtx,
   to: Address,
   amountMicro: bigint,
-  opts: { gas?: bigint } = {},
+  opts: { gas?: bigint; minNonce?: bigint } = {},
 ): Promise<SignedTx> {
   const data = encodeFunctionData({
     abi: erc20Abi,
     functionName: "transfer",
     args: [to, amountMicro],
   });
-  return signTreasuryTx(ctx, { to: ctx.token, data, gas: opts.gas });
+  return signTreasuryTx(ctx, { to: ctx.token, data, gas: opts.gas, minNonce: opts.minNonce });
 }
 
 async function signTreasuryTx(
   ctx: ChainCtx,
-  tx: { to: Address; data?: Hex; gas?: bigint; nonce?: number; feeBump?: bigint },
+  tx: {
+    to: Address;
+    data?: Hex;
+    gas?: bigint;
+    nonce?: number;
+    minNonce?: bigint;
+    feeBump?: bigint;
+  },
 ): Promise<SignedTx> {
   const pc = ctx.publicClient;
-  const [nonce, fees, gas] = await Promise.all([
+  const [pendingNonce, fees, gas] = await Promise.all([
     tx.nonce ?? pc.getTransactionCount({ address: ctx.treasury.address, blockTag: "pending" }),
     pc.estimateFeesPerGas(),
     tx.gas ?? pc.estimateGas({ account: ctx.treasury.address, to: tx.to, data: tx.data }),
   ]);
+  // Nonce reservado no banco mas ainda não transmitido não aparece em "pending" no nó.
+  const nonce = Math.max(pendingNonce, Number(tx.minNonce ?? 0n));
   const bump = tx.feeBump ?? 1n;
   const rawTx = await ctx.treasury.signTransaction({
     chainId: ctx.chainId,

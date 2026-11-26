@@ -90,7 +90,7 @@ Toda tarefa só conta como feita com `npm run lint && npm run typecheck && npm t
 **Arquivos:** `src/app/api/wallet/route.ts`, `src/app/api/me/route.ts`, `src/components/WalletCard.tsx`, `src/components/AccountCard.tsx`, `tests/integration/wallet.test.ts`
 **Tamanho:** M
 
-### [ ] Tarefa 8: Transferência MB → wallet (API + confirmação + estorno)
+### [x] Tarefa 8: Transferência MB → wallet (API + confirmação + estorno)
 **Descrição:** `POST /api/transfers` para `MB_TO_WALLET`: valida, reserva e assina numa única transação de banco (com lock consultivo da tesouraria), grava o hash e só então transmite. `advance()` em `transfers.ts` cobre confirmar após `CONFIRMATIONS`, estornar quando revertido e retransmitir se o nó não conhece o tx. `GET /api/transfers/:id` chama `advance()`.
 **Aceite:**
 - [ ] Transferência no Anvil termina `CONFIRMADA`, com a reserva baixada e a wallet creditada
