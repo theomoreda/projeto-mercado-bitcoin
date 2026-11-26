@@ -238,7 +238,7 @@ Aceite do TAP, verificável pelo roteiro `docs/DEMO.md` em Sepolia:
 - [ ] Conta de demonstração entra por e-mail + código, sem senha nem seed phrase.
 - [ ] Ativa a wallet com um clique; o endereço aparece na tela.
 - [ ] Os dois saldos aparecem separados e rotulados.
-- [ ] Valor `0`, negativo, acima do saldo ou com 3+ casas é bloqueado com mensagem explicativa; `10,999` é tratado como `10,99`.
+- [ ] Valor `0`, negativo ou acima do saldo é bloqueado com mensagem explicativa. Com 3+ casas, o valor é truncado (`10,999` → `10,99`, nunca arredondado) com o aviso "use até duas casas decimais", e nunca é enviado com mais de 2 casas (conciliação entre RF-06 e a regra de truncamento do TAP).
 - [ ] Transferência MB → wallet e wallet → MB concluem com valores > 0 e ≤ saldo.
 - [ ] A operação atual mostra Processando → Concluída/Não concluída e o link do explorador da Sepolia.
 - [ ] Uma falha forçada (ex.: tx revertido no Anvil) devolve a reserva e a tela informa isso.

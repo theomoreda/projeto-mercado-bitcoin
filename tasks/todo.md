@@ -18,7 +18,7 @@ Toda tarefa só conta como feita com `npm run lint && npm run typecheck && npm t
 **Arquivos:** `package.json`, `docker-compose.yml`, `.env.example`, `vitest.config.ts`, `README.md`, `LICENSE` (+ arquivos gerados pelo `create-next-app`)
 **Tamanho:** M
 
-### [ ] Tarefa 2: Regras de valor (`money.ts`)
+### [x] Tarefa 2: Regras de valor (`money.ts`)
 **Descrição:** Funções puras, feitas com TDD: `parseAmount` (aceita `,`/`.`, trunca para 2 casas e devolve o motivo da rejeição), `centsToMicro`, `splitMicro` (centavos + excedente), `formatBRL`-like (`1.000,00 USDC`). Adicionar a regra de lint que barra `parseFloat`/`Number(` nos módulos de saldo.
 **Aceite:**
 - [ ] `"10,999"` → 1099 centavos; `"0"`, `"-1"`, `"abc"`, `""` e valor > saldo são rejeitados com o motivo correto

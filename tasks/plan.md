@@ -48,7 +48,7 @@ scaffold (1)
 
 ### Fase 1 — Semana 1: fundação (ledger antes da blockchain)
 - [x] Tarefa 1: Scaffold do projeto e infraestrutura local
-- [ ] Tarefa 2: Regras de valor (`money.ts`)
+- [x] Tarefa 2: Regras de valor (`money.ts`)
 - [ ] Tarefa 3: Contrato `MockUSDC` com testes e script de deploy
 - [ ] Tarefa 4: Schema e ledger atômico
 - [ ] Tarefa 5: Login por e-mail e conta de demonstração
