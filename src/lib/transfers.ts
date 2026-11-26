@@ -7,6 +7,7 @@ import { getAddress, isAddressEqual, type Address, type Hex } from "viem";
 import { accounts, transfers, type Account, type Transfer } from "../db/schema.ts";
 import {
   broadcast,
+  findInboundTransfers,
   findTransaction,
   getTxStatus,
   inboundAmountFromLogs,
@@ -25,7 +26,7 @@ import {
   refundOutbound,
   settleOutbound,
 } from "./ledger.ts";
-import { requireAccount } from "./me.ts";
+import { requireAccount } from "./account.ts";
 import { parseAmount } from "./money.ts";
 
 /** Chave do lock consultivo que serializa a escolha de nonce da tesouraria. */
@@ -253,4 +254,35 @@ async function advanceOutbound(deps: AppDeps, chain: ChainCtx, t: Transfer) {
     else await refundOutbound(deps.db, t.id, "transacao_revertida");
   }
   return status.confirmations;
+}
+
+/** Janelas lidas por chamada: limita a latência do painel; o marcador guarda o progresso. */
+const MAX_SCAN_CHUNKS = 20;
+
+/**
+ * Recuperação: lê os Transfer(carteira → Conta MB) desde `last_scanned_block` até o
+ * último bloco já com CONFIRMATIONS confirmações e credita cada hash via creditInbound.
+ * Cobre quem fechou a aba entre enviar e avisar. Revarrer é seguro (hash único).
+ */
+export async function scanInbound(deps: AppDeps, chain: ChainCtx, account: Account): Promise<void> {
+  if (!account.walletAddress || account.lastScannedBlock === null) return;
+  const wallet = getAddress(account.walletAddress);
+  const latest = await chain.publicClient.getBlockNumber({ cacheTime: 0 });
+  const safeTo = latest - deps.config.confirmations + 1n;
+
+  let from = account.lastScannedBlock;
+  for (let i = 0; i < MAX_SCAN_CHUNKS && from <= safeTo; i++) {
+    const to =
+      from + deps.config.scanChunkBlocks - 1n < safeTo
+        ? from + deps.config.scanChunkBlocks - 1n
+        : safeTo;
+    for (const { txHash } of await findInboundTransfers(chain, wallet, from, to)) {
+      await creditInbound(deps, chain, account, txHash);
+    }
+    from = to + 1n;
+    await deps.db
+      .update(accounts)
+      .set({ lastScannedBlock: sql`GREATEST(${accounts.lastScannedBlock}, ${from})` })
+      .where(eq(accounts.id, account.id));
+  }
 }

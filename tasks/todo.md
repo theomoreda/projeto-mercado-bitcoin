@@ -142,7 +142,7 @@ Toda tarefa só conta como feita com `npm run lint && npm run typecheck && npm t
 **Arquivos:** `src/lib/transfers.ts`, `src/app/api/transfers/route.ts`, `src/components/TransferForm.tsx`, `tests/integration/inbound.test.ts`
 **Tamanho:** M
 
-### [ ] Tarefa 12: Varredura de recuperação de entradas
+### [x] Tarefa 12: Varredura de recuperação de entradas
 **Descrição:** `scanInbound(account)` lê os logs `Transfer(wallet → tesouraria)` de `last_scanned_block` até `latest − CONFIRMATIONS`, em janelas de blocos, chama `creditInbound` para cada hash e avança `last_scanned_block`. Roda no `GET /api/me`.
 **Aceite:**
 - [ ] Um tx enviado sem aviso do cliente aparece creditado ao recarregar o painel

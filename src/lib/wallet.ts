@@ -2,7 +2,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { accounts, type Account } from "../db/schema.ts";
 import type { AppDeps } from "./deps.ts";
 import { HttpError, isUniqueViolation, respond } from "./http.ts";
-import { requireAccount } from "./me.ts";
+import { requireAccount } from "./account.ts";
 
 /**
  * POST /api/wallet — vincula à conta a carteira embutida que a Privy diz pertencer ao

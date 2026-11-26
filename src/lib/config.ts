@@ -12,6 +12,8 @@ export function serverConfig() {
     initialCents: initial.cents,
     confirmations: BigInt(process.env.CONFIRMATIONS ?? "2"),
     observationWindowMs: Number(process.env.OBSERVATION_WINDOW_MIN ?? "10") * 60_000,
+    // Tamanho da janela de eth_getLogs: RPCs gratuitos limitam a faixa de blocos por chamada.
+    scanChunkBlocks: BigInt(process.env.SCAN_CHUNK_BLOCKS ?? "500"),
   };
 }
 

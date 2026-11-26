@@ -66,7 +66,7 @@ scaffold (1)
 
 ### Fase 3 — Semana 3: wallet → MB, idempotência e reconciliação
 - [x] Tarefa 11: Crédito wallet → MB após confirmação
-- [ ] Tarefa 12: Varredura de recuperação de entradas
+- [x] Tarefa 12: Varredura de recuperação de entradas
 - [ ] Tarefa 13: Transação presa: cancelamento e estorno seguro
 - [ ] Tarefa 14: Reconciliação
 

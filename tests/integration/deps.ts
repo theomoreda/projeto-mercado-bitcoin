@@ -21,6 +21,7 @@ export function makeDeps(users: Record<string, FakeUser>, chain?: ChainCtx): App
       initialCents: 100_000n,
       confirmations: 2n,
       observationWindowMs: 60_000,
+      scanChunkBlocks: 500n,
     },
     chain: async () => {
       if (!chain) throw new Error("sem cadeia neste teste");
