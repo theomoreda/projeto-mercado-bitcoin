@@ -8,14 +8,16 @@ Projeto acadêmico em testnet. **Não é seguro para produção**, e não deve r
 |---|---|---|
 | Cada hash afeta o ledger no máximo uma vez (RNF-02) | `UNIQUE(transfers.tx_hash)` + transições `UPDATE … WHERE status = 'PROCESSANDO'` | `ledger.test.ts`, `inbound.test.ts`, `scan.test.ts` |
 | Dois envios não gastam o mesmo saldo | `UPDATE accounts … WHERE available_cents >= x` + `CHECK (available_cents >= 0)` | `ledger.test.ts` (concorrência) |
-| Duplo clique não duplica | `UNIQUE(client_request_id)` | `ledger.test.ts`, `outbound.test.ts` |
+| Duplo clique ou repetição não duplica | `UNIQUE(client_request_id)`; a repetição na mesma conta devolve o pedido original, e o mesmo id vindo de outra conta recebe 409 `pedido_conflitante` | `ledger.test.ts`, `outbound.test.ts` |
 | Estorno acontece uma vez só | Transição condicionada ao status | `ledger.test.ts`, `outbound.test.ts` |
 | Sem crédito otimista | O crédito exige recibo com ≥ `CONFIRMATIONS`; o valor vem do evento `Transfer` | `inbound.test.ts` |
 | Sem ponto flutuante no saldo (RNF-03) | `bigint` de ponta a ponta; ESLint proíbe `parseFloat`/`Number`/`Math` nos módulos de saldo | `money.test.ts` |
 | Fundos só vão para a carteira do próprio usuário | O endereço é consultado na Privy pelo servidor; o enviado pelo cliente é ignorado | `wallet.test.ts` |
 | Ninguém registra o hash de outra pessoa | O hash só é aceito se o tx veio da carteira da conta para a tesouraria | `inbound.test.ts` |
 | Transação presa não vira dinheiro duplicado | Estorno só depois que o nonce foi consumido por outro tx (cancelamento) | `stuck.test.ts` |
-| Somas fecham | `npm run reconcile` | `reconcile.test.ts` |
+| Somas fecham, inclusive com e-mail da demo que ainda não entrou | `npm run reconcile` soma o lastro de `DEMO_EMAILS` sem conta ao esperado da tesouraria | `reconcile.test.ts` |
+| Entrada inválida não vira erro 500 | `CONFIRMATIONS`, `SCAN_CHUNK_BLOCKS` e `OBSERVATION_WINDOW_MIN` são validados; corpo que não é objeto → 400; id que não é UUID → 404 | `config.test.ts`, `routes.test.ts` |
+| O token só é emitido pelo owner e o deploy não vai para mainnet | `onlyOwner` no `mint`; `Deploy.s.sol` só aceita Sepolia e Anvil | `MockUSDC.t.sol` (fuzz), `Deploy.t.sol` |
 
 ## Perguntas do guia de estudo (as que se aplicam ao escopo)
 
@@ -40,6 +42,19 @@ Para provar isso a um auditor: o código não contém chaves, o histórico do gi
 - **Reorgs profundos:** com 2 confirmações, um reorg maior que isso não é tratado.
 - **Disponibilidade:** sem fila nem worker. Uma transferência só avança quando alguém consulta o status ou a reconciliação roda.
 - **Taxas:** a carteira demo precisa de Sepolia ETH para pagar a taxa do envio de volta (sem patrocínio de gas, conforme o TAP).
+
+## Riscos aceitos no refinamento
+
+Comportamentos decididos conscientemente durante a revisão final (novembro de 2026). Cada um tem teste, e nenhum afeta fundos reais.
+
+| Risco ou limite | Por que é aceito | O que o limita |
+|---|---|---|
+| Um depósito que expirou como `FALHOU` (sem recibo na janela de observação) ainda é creditado se o tx minerar depois | A alternativa é o usuário perder o valor que já saiu da carteira dele | O valor vem do evento `Transfer`; o `tx_hash` é único, então o crédito acontece uma única vez (`inbound.test.ts`) |
+| A varredura de entradas relê a mesma janela de blocos enquanto houver um depósito sem recibo ou sem confirmações | Evita pular um depósito quando o nó está atrasado; o custo é uma chamada extra de RPC | O marcador só avança depois de resolver todos os depósitos da janela; a releitura não duplica crédito (`scan.test.ts`) |
+| O lastro de um e-mail de `DEMO_EMAILS` que nunca entrou fica parado na tesouraria | A conta só nasce no primeiro login; sem isso o `reconcile` acusaria uma diferença falsa | O `reconcile` espera exatamente o saldo inicial por e-mail sem conta; falta ou sobra de fundos continua sendo alertada (`reconcile.test.ts`) |
+| Se o RPC cair durante a consulta de status, a resposta traz o estado atual (por exemplo, "Processando") em vez de erro | A consulta é repetida pelo cliente; um erro 500 só assustaria o usuário | Nenhuma transição do ledger acontece fora do `advance`; a falha é registrada no servidor (`routes.test.ts`) |
+| O `clientRequestId` é gerado pelo cliente, e usar o de outra conta devolve 409 | Revela apenas que aquele id está em uso, sem dados da outra conta | O id é único e escopado por conta; a repetição legítima devolve o pedido original (`outbound.test.ts`) |
+| O CI usa as ações do GitHub por versão maior (`@v4`, `@v1`) e instala o Foundry `stable` na hora | Fixar por hash exigiria manutenção que a PoC não tem; já houve falha do CI por instabilidade do GitHub (504) | O workflow não usa segredos e tem permissão só de leitura (`permissions: contents: read`); o build usa um App ID fictício |
 
 ## Dependências
 
