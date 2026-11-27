@@ -196,3 +196,48 @@ describe("POST /api/transfers MB_TO_WALLET", () => {
     expect(res.status).toBe(404);
   });
 });
+
+const OTHER = "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC" as const;
+const bothDeps = () =>
+  makeDeps(
+    {
+      demo: { email: "demo@x.com", wallet: WALLET },
+      other: { email: "other@x.com", wallet: OTHER },
+    },
+    c.ctx,
+  );
+
+describe("idempotência por clientRequestId", () => {
+  it("retry do saque do saldo inteiro devolve a mesma transferência e debita uma vez", async () => {
+    const requestId = randomUUID();
+    const first = await (await send("1000", requestId)).json();
+    const retry = await send("1000", requestId);
+    expect(retry.status).toBe(200);
+    expect((await retry.json()).id).toBe(first.id);
+    const a = await account();
+    expect([a.availableCents, a.reservedCents]).toEqual([0n, 100_000n]);
+    expect(await db.select().from(transfers)).toHaveLength(1);
+  });
+
+  it("clientRequestId de outra conta não vaza e não cria nem reserva nada", async () => {
+    const requestId = randomUUID();
+    const mine = await (await send("10", requestId)).json();
+    await handleActivateWallet(req("/api/wallet", "tok-other", {}), bothDeps());
+
+    const res = await handleCreateTransfer(
+      req("/api/transfers", "tok-other", {
+        direction: "MB_TO_WALLET",
+        amount: "5",
+        clientRequestId: requestId,
+      }),
+      bothDeps(),
+    );
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ error: "pedido_conflitante" });
+
+    const [other] = await db.select().from(accounts).where(eq(accounts.email, "other@x.com"));
+    expect([other.availableCents, other.reservedCents]).toEqual([100_000n, 0n]);
+    const all = await db.select().from(transfers);
+    expect(all.map((t) => t.id)).toEqual([mine.id]);
+  });
+});
