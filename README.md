@@ -45,9 +45,9 @@ Tudo é de testnet e gratuito. Os valores vão em `.env.local`, que nunca é com
 4. **Contrato** → implante o Mock USDC (a tesouraria vira owner):
    ```bash
    set -a; . ./.env.local; set +a
-   (cd contracts && forge script script/Deploy.s.sol --rpc-url "$RPC_URL" --private-key "$TREASURY_PRIVATE_KEY" --broadcast)
+   (cd contracts && forge script script/Deploy.s.sol --rpc-url "$RPC_URL" --private-key "$TREASURY_PRIVATE_KEY" --broadcast --gas-estimate-multiplier 750)
    ```
-   Copie o endereço impresso (`NEXT_PUBLIC_TOKEN_ADDRESS=0x…`) para `.env.local`.
+   Copie o endereço impresso (`NEXT_PUBLIC_TOKEN_ADDRESS=0x…`) para `.env.local`. O multiplicador é necessário porque a Sepolia cobra cerca de 7× mais gas na criação de contratos do que a simulação local do Foundry estima (≈ 7,4 M contra 1,1 M). Sem ele, o deploy reverte por falta de gas. O custo continua irrisório (≈ 0,0002 ETH de teste). O script recusa qualquer rede que não seja Sepolia ou Anvil.
 5. **Demo** → coloque o e-mail da conta de demonstração em `DEMO_EMAILS` e emita o lastro da tesouraria:
    ```bash
    npm run seed        # tesouraria fica com DEMO_EMAILS × INITIAL_BALANCE em Mock USDC
