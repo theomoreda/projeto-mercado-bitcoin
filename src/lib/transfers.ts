@@ -57,7 +57,12 @@ type CreateBody = {
 export function handleCreateTransfer(req: Request, deps: AppDeps): Promise<Response> {
   return respond(async () => {
     const { account } = await requireAccount(req, deps);
-    const body = (await req.json().catch(() => ({}))) as CreateBody;
+    const raw: unknown = await req.json().catch(() => null);
+    // `null`, número, texto ou lista também são JSON válido, mas não são um pedido.
+    if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
+      throw new HttpError(400, "pedido_invalido");
+    }
+    const body = raw as CreateBody;
     if (typeof body.clientRequestId !== "string" || body.clientRequestId.length < 8) {
       throw new HttpError(400, "pedido_invalido");
     }
@@ -170,17 +175,27 @@ async function startOutbound(
   return result.transfer;
 }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /** GET /api/transfers/:id — avança o estado e devolve a transferência. */
 export function handleGetTransfer(req: Request, deps: AppDeps, id: string): Promise<Response> {
   return respond(async () => {
     const { account } = await requireAccount(req, deps);
+    // Id que não é UUID nunca existe; sem isto o Postgres recusa o cast e vira 500.
+    if (!UUID.test(id)) throw new HttpError(404, "nao_encontrada");
     const [t] = await deps.db
       .select()
       .from(transfers)
       .where(and(eq(transfers.id, id), eq(transfers.accountId, account.id)));
     if (!t) throw new HttpError(404, "nao_encontrada");
     if (t.status !== "PROCESSANDO") return view(t);
-    const confirmations = await advance(deps, await deps.chain(), t);
+    // RPC fora do ar não é erro do cliente: devolve o estado atual e a próxima consulta tenta de novo.
+    let confirmations: bigint | undefined;
+    try {
+      confirmations = await advance(deps, await deps.chain(), t);
+    } catch (err) {
+      console.error("advance falhou; devolvendo o estado atual", err);
+    }
     const [fresh] = await deps.db.select().from(transfers).where(eq(transfers.id, id));
     return view(fresh, confirmations);
   });
