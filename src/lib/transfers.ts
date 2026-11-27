@@ -271,19 +271,21 @@ const MAX_SCAN_CHUNKS = 20;
  * último bloco já com CONFIRMATIONS confirmações e credita cada hash via creditInbound.
  * Cobre quem fechou a aba entre enviar e avisar. Revarrer é seguro (hash único).
  */
-export async function scanInbound(deps: AppDeps, chain: ChainCtx, account: Account): Promise<void> {
-  if (!account.walletAddress || account.lastScannedBlock === null) return;
+export async function scanInbound(
+  deps: AppDeps,
+  chain: ChainCtx,
+  account: Account,
+): Promise<boolean> {
+  if (!account.walletAddress || account.lastScannedBlock === null) return true;
   const wallet = getAddress(account.walletAddress);
+  const chunk = deps.config.scanChunkBlocks;
   const latest = await chain.publicClient.getBlockNumber({ cacheTime: 0 });
   const safeTo = latest - deps.config.confirmations + 1n;
 
   let from = account.lastScannedBlock;
   for (let i = 0; i < MAX_SCAN_CHUNKS && from <= safeTo; i++) {
-    const to =
-      from + deps.config.scanChunkBlocks - 1n < safeTo
-        ? from + deps.config.scanChunkBlocks - 1n
-        : safeTo;
-    for (const { txHash } of await findInboundTransfers(chain, wallet, from, to)) {
+    const to = from + chunk - 1n < safeTo ? from + chunk - 1n : safeTo;
+    for (const { txHash } of await findInboundTransfers(chain, wallet, from, to, chunk)) {
       await creditInbound(deps, chain, account, txHash);
     }
     from = to + 1n;
@@ -292,4 +294,5 @@ export async function scanInbound(deps: AppDeps, chain: ChainCtx, account: Accou
       .set({ lastScannedBlock: sql`GREATEST(${accounts.lastScannedBlock}, ${from})` })
       .where(eq(accounts.id, account.id));
   }
+  return from > safeTo; // alcançou o topo? (senão, a próxima chamada continua daqui)
 }

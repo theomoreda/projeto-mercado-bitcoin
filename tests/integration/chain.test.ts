@@ -89,8 +89,9 @@ describe("wallet → tesouraria", () => {
     const found = await findInboundTransfers(
       c.ctx,
       USER,
-      from,
+      from - 3n, // faixa maior que a janela: exercita a divisão em janelas de 2 blocos
       await c.pub.getBlockNumber({ cacheTime: 0 }),
+      2n,
     );
     expect(found).toEqual([{ txHash: hash, amountMicro: 1_234_567n }]);
   });

@@ -92,6 +92,36 @@ describe("reconcile", () => {
     expect(r.treasury?.diffMicro).toBe(-10_000n);
   });
 
+  it("varredura muito atrasada (RPC com faixa pequena de logs) alcança o topo antes de calcular", async () => {
+    const tight = { ...deps(), config: { ...deps().config, scanChunkBlocks: 2n } };
+    const ranges: bigint[] = [];
+    const getContractEvents = c.ctx.publicClient.getContractEvents.bind(c.ctx.publicClient);
+    const spy = {
+      ...c.ctx,
+      publicClient: {
+        ...c.ctx.publicClient,
+        getBlockNumber: c.ctx.publicClient.getBlockNumber.bind(c.ctx.publicClient),
+        getContractEvents: (async (args: { fromBlock: bigint; toBlock: bigint }) => {
+          ranges.push(args.toBlock - args.fromBlock + 1n);
+          if (args.toBlock - args.fromBlock + 1n > 2n)
+            throw new Error("faixa acima do limite do RPC");
+          return getContractEvents(args as never);
+        }) as never,
+      },
+    } as typeof c.ctx;
+    await poll(await toWallet("20"));
+    await c.mine(1);
+    await poll((await db.query.transfers.findFirst())!.id);
+    await c.mine(60); // > 20 janelas de 2 blocos
+    await toMb(5_000_000n);
+    await c.mine(1);
+
+    const r = await reconcile({ ...tight, chain: async () => spy });
+    expect(r.ok).toBe(true);
+    expect(Math.max(...ranges.map(Number))).toBeLessThanOrEqual(2);
+    expect((await db.select().from(accounts))[0].availableCents).toBe(100_000n - 2_000n + 500n);
+  });
+
   it("npm run reconcile sai com 0 quando fecha e ≠ 0 quando há diferença", async () => {
     expect(await db.select().from(accounts)).toHaveLength(1);
     const env = {

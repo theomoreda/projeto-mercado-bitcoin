@@ -242,22 +242,31 @@ export function tokenBalance(ctx: ChainCtx, owner: Address): Promise<bigint> {
   });
 }
 
-/** Transfers de Mock USDC `from` → tesouraria, numa faixa de blocos (inclusive). */
+/**
+ * Transfers de Mock USDC `from` → tesouraria numa faixa de blocos (inclusive), lida em
+ * janelas de `chunk` blocos: RPCs gratuitos limitam a faixa do eth_getLogs (Alchemy: 10).
+ */
 export async function findInboundTransfers(
   ctx: ChainCtx,
   from: Address,
   fromBlock: bigint,
   toBlock: bigint,
+  chunk: bigint,
 ): Promise<{ txHash: Hex; amountMicro: bigint }[]> {
-  const logs = await ctx.publicClient.getContractEvents({
-    address: ctx.token,
-    abi: erc20Abi,
-    eventName: "Transfer",
-    args: { from, to: ctx.treasury.address },
-    fromBlock,
-    toBlock,
-  });
-  return logs.map((l) => ({ txHash: l.transactionHash, amountMicro: l.args.value! }));
+  const found: { txHash: Hex; amountMicro: bigint }[] = [];
+  for (let start = fromBlock; start <= toBlock; start += chunk) {
+    const end = start + chunk - 1n < toBlock ? start + chunk - 1n : toBlock;
+    const logs = await ctx.publicClient.getContractEvents({
+      address: ctx.token,
+      abi: erc20Abi,
+      eventName: "Transfer",
+      args: { from, to: ctx.treasury.address },
+      fromBlock: start,
+      toBlock: end,
+    });
+    for (const l of logs) found.push({ txHash: l.transactionHash, amountMicro: l.args.value! });
+  }
+  return found;
 }
 
 const mintAbi = parseAbi(["function mint(address to, uint256 amount)"]);

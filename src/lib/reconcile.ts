@@ -83,7 +83,11 @@ export async function reconcile(deps: AppDeps, onlyAccountId?: string): Promise<
 }
 
 async function settlePending(deps: AppDeps, chain: ChainCtx, a: Account) {
-  await scanInbound(deps, chain, a);
+  // Varre até alcançar o topo: a cada chamada a varredura lê no máximo 20 janelas.
+  let current = a;
+  while (!(await scanInbound(deps, chain, current))) {
+    [current] = await deps.db.select().from(accounts).where(eq(accounts.id, a.id));
+  }
   const pending = await deps.db
     .select()
     .from(transfers)
@@ -99,6 +103,7 @@ async function inboundInTransit(deps: AppDeps, chain: ChainCtx, a: Account, late
     a.walletAddress as Address,
     a.lastScannedBlock,
     latest,
+    deps.config.scanChunkBlocks,
   );
   let sum = 0n;
   for (const { txHash, amountMicro } of found) {
