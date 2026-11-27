@@ -18,6 +18,9 @@ if (r.treasury) {
   const t = r.treasury;
   console.log(`Tesouraria ${t.address}`);
   console.log(`  on-chain ${fmt(t.onchainMicro)} · esperado ${fmt(t.expectedMicro)}`);
+  if (t.unclaimedMicro > 0n) {
+    console.log(`  (inclui ${fmt(t.unclaimedMicro)} de lastro de e-mails da demo ainda sem conta)`);
+  }
   console.log(`  ${t.diffMicro === 0n ? "ok" : `DIFERENÇA ${fmt(t.diffMicro)}`}`);
 }
 console.log(r.ok ? "Tudo confere." : "Há diferenças: investigue antes de continuar.");

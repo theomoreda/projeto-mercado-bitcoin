@@ -2,6 +2,7 @@
  * Reconciliação (SPEC.md › Reconciliação, RNF-04), em micro-unidades:
  *   por conta:   custodial + carteira + entradas_em_trânsito − saídas_em_trânsito = inicial
  *   tesouraria:  saldo on-chain = Σ custodial + entradas_em_trânsito − saídas_em_trânsito
+ *                                 + lastro dos DEMO_EMAILS que ainda não criaram conta
  * "Em trânsito" = já minerado, ainda sem CONFIRMATIONS: entrada que saiu da carteira e
  * ainda não foi creditada; saída que já chegou à carteira e ainda está reservada.
  */
@@ -11,6 +12,7 @@ import { accounts, transfers, type Account } from "../db/schema.ts";
 import { findInboundTransfers, getTxStatus, tokenBalance, type ChainCtx } from "./chain.ts";
 import type { AppDeps } from "./deps.ts";
 import { custodialMicro } from "./ledger.ts";
+import { centsToMicro } from "./money.ts";
 import { advance, scanInbound } from "./transfers.ts";
 
 export type AccountRecon = {
@@ -26,6 +28,8 @@ export type TreasuryRecon = {
   address: Address;
   onchainMicro: bigint;
   expectedMicro: bigint;
+  /** Parte do esperado que lastreia e-mails da demo que ainda não entraram (sem conta). */
+  unclaimedMicro: bigint;
   diffMicro: bigint;
 };
 
@@ -50,7 +54,8 @@ export async function reconcile(deps: AppDeps, onlyAccountId?: string): Promise<
   const result: AccountRecon[] = [];
   let custodialTotal = 0n;
   let inTransitTotal = 0n;
-  for (const a of await load()) {
+  const loaded = await load();
+  for (const a of loaded) {
     const custodial = custodialMicro(a);
     const wallet = a.walletAddress ? await tokenBalance(chain, a.walletAddress as Address) : 0n;
     const inTransit =
@@ -70,11 +75,17 @@ export async function reconcile(deps: AppDeps, onlyAccountId?: string): Promise<
   let treasury: TreasuryRecon | null = null;
   if (!onlyAccountId) {
     const onchain = await tokenBalance(chain, chain.treasury.address);
-    const expected = custodialTotal + inTransitTotal;
+    // O seed emite DEMO_EMAILS × saldo inicial, mas a conta só nasce no primeiro login:
+    // o lastro de quem ainda não entrou continua na tesouraria e não é diferença.
+    const withAccount = new Set(loaded.map((a) => a.email.toLowerCase()));
+    const unclaimed = deps.config.demoEmails.filter((e) => !withAccount.has(e)).length;
+    const unclaimedMicro = BigInt(unclaimed) * centsToMicro(deps.config.initialCents);
+    const expected = custodialTotal + inTransitTotal + unclaimedMicro;
     treasury = {
       address: chain.treasury.address,
       onchainMicro: onchain,
       expectedMicro: expected,
+      unclaimedMicro,
       diffMicro: onchain - expected,
     };
   }
