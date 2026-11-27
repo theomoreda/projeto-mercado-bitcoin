@@ -74,7 +74,7 @@ scaffold (1)
 
 ### Fase 4 — Semana 4: testes do fluxo, docs e entrega (até 27/11, 23h59)
 - [x] Tarefa 15: Documentação (README, ARCHITECTURE, SECURITY, DEMO)
-- [ ] Tarefa 16: Aceite em Sepolia e polimento de UX
+- [x] Tarefa 16: Aceite em Sepolia e polimento de UX
 
 **Checkpoint final:** todos os Success Criteria da spec marcados; projeto sobe do zero seguindo o README; congelamento.
 
@@ -88,7 +88,7 @@ As tarefas 2, 3 e 4 são independentes entre si depois da 1. As tarefas 8–9 (i
 |---|---|---|
 | Prazo de ~2,5 dias para 16 tarefas | Alto | Tarefas S/M, fatias verticais e corte pela lista Deferred. Se apertar, a Tarefa 13 cai para "estorno só quando o nonce já foi consumido", sem enviar cancelamento ativo, e fica documentada |
 | Credenciais (Privy, RPC, tesouraria) ainda não existem | Alto | Anvil cobre as fases 1–3; o passo a passo de credenciais entra no README logo na Tarefa 1 para você criar em paralelo |
-| `sendTransaction` da Privy com `data` de ERC-20 não confirmado na doc React (tipagem instalada confirma `data?: string`; falta só o teste em Sepolia) | Baixo | Validado cedo na Tarefa 10. Plano B: assinar pelo provider EIP-1193 da embedded wallet via viem `walletClient`, ainda sem UI |
+| `sendTransaction` da Privy com `data` de ERC-20 não confirmado na doc React (confirmado em Sepolia em 26/11) | Resolvido | Validado cedo na Tarefa 10. Plano B: assinar pelo provider EIP-1193 da embedded wallet via viem `walletClient`, ainda sem UI |
 | Limite de faixa do `eth_getLogs` no RPC gratuito | Médio | Varredura em janelas de blocos a partir de `last_scanned_block` (definido na ativação), nunca do bloco 0 |
 | Faucet de Sepolia ETH lento ou com limite | Médio | Abastecer tesouraria e wallet demo assim que existirem; o gasto por demo é mínimo |
 | Reorg raso com `CONFIRMATIONS = 2` | Baixo | Testnet sem valor; aceito e documentado em SECURITY.md |

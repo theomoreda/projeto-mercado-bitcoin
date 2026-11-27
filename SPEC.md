@@ -235,17 +235,17 @@ O Anvil é o substituto local da Sepolia nos testes automatizados. A Sepolia só
 
 Aceite do TAP, verificável pelo roteiro `docs/DEMO.md` em Sepolia:
 
-- [ ] Conta de demonstração entra por e-mail + código, sem senha nem seed phrase.
-- [ ] Ativa a wallet com um clique; o endereço aparece na tela.
-- [ ] Os dois saldos aparecem separados e rotulados.
-- [ ] Valor `0`, negativo ou acima do saldo é bloqueado com mensagem explicativa. Com 3+ casas, o valor é truncado (`10,999` → `10,99`, nunca arredondado) com o aviso "use até duas casas decimais", e nunca é enviado com mais de 2 casas (conciliação entre RF-06 e a regra de truncamento do TAP).
-- [ ] Transferência MB → wallet e wallet → MB concluem com valores > 0 e ≤ saldo.
-- [ ] A operação atual mostra Processando → Concluída/Não concluída e o link do explorador da Sepolia.
-- [ ] Uma falha forçada (ex.: tx revertido no Anvil) devolve a reserva e a tela informa isso.
-- [ ] Ao final, `npm run reconcile` sai com código 0: soma dos saldos = saldo inicial.
-- [ ] Reenviar o mesmo hash/recarregar a página/revarrer blocos não altera o ledger (teste de integração).
-- [ ] Nenhuma tela do fluxo principal exige instalar extensão, trocar rede ou aprovar pop-up de assinatura (RNF-05).
-- [ ] O projeto sobe em outra máquina seguindo só o README + `.env.example` + script de deploy (RNF-07); licença MIT e docs de arquitetura e segurança presentes (RNF-08).
+- [x] Conta de demonstração entra por e-mail + código, sem senha nem seed phrase. — ✅ Sepolia, 26/11
+- [x] Ativa a wallet com um clique; o endereço aparece na tela. — ✅ Sepolia, 26/11
+- [x] Os dois saldos aparecem separados e rotulados. — ✅ Sepolia, 26/11
+- [x] Valor `0`, negativo ou acima do saldo é bloqueado com mensagem explicativa. Com 3+ casas, o valor é truncado (`10,999` → `10,99`, nunca arredondado) com o aviso "use até duas casas decimais", e nunca é enviado com mais de 2 casas (conciliação entre RF-06 e a regra de truncamento do TAP). — ✅ testes automatizados (`money.test.ts`, `transfer-ui.test.ts`, `outbound.test.ts`); não exercitado manualmente em Sepolia
+- [x] Transferência MB → wallet e wallet → MB concluem com valores > 0 e ≤ saldo. — ✅ Sepolia, 26/11 (100,00 ida; 40,00 volta)
+- [x] A operação atual mostra Processando → Concluída/Não concluída e o link do explorador da Sepolia. — ✅ Sepolia, 26/11
+- [x] Uma falha forçada (ex.: tx revertido no Anvil) devolve a reserva e a tela informa isso. — ✅ testes automatizados no Anvil (`outbound.test.ts`, `stuck.test.ts`); a mensagem de estorno da tela é coberta por `transfer-ui.test.ts`
+- [x] Ao final, `npm run reconcile` sai com código 0: soma dos saldos = saldo inicial. — ✅ Sepolia, 26/11: conta 940,00 + 60,00 = 1.000,00; tesouraria 940,00 = esperado
+- [x] Reenviar o mesmo hash/recarregar a página/revarrer blocos não altera o ledger (teste de integração). — ✅ testes de integração
+- [x] Nenhuma tela do fluxo principal exige instalar extensão, trocar rede ou aprovar pop-up de assinatura (RNF-05). — ✅ Sepolia, 26/11: volta assinada sem pop-up
+- [x] O projeto sobe em outra máquina seguindo só o README + `.env.example` + script de deploy (RNF-07); licença MIT e docs de arquitetura e segurança presentes (RNF-08). — ✅ clone limpo seguindo o README (26/11); repositório público pendente
 
 ## Cronograma (semanas do TAP como fases; prazo real)
 

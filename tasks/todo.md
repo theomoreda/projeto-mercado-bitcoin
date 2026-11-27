@@ -114,7 +114,7 @@ Toda tarefa só conta como feita com `npm run lint && npm run typecheck && npm t
 ### [x] Tarefa 10: Envio wallet → MB no navegador (validação prática da Privy + guarda de rede)
 **Descrição:** No sentido de volta, o cliente valida o valor contra o saldo on-chain, codifica `transfer(tesouraria, micro)` com viem e envia via `useSendTransaction` com `showWalletUIs: false`. Guarda de rede: se o `chainId` da wallet não for Sepolia, tenta trocar; se não conseguir, bloqueia com aviso (RNF-01). **Esta tarefa é o teste do risco da Privy.**
 **Aceite:**
-- [ ] Com credenciais, o envio em Sepolia sai sem nenhum pop-up e devolve um hash — **pendente de verificação manual (Tarefa 16)**; a tipagem instalada da Privy (`UnsignedTransactionRequest.data?: string`, `chainId?: number`) confirma que o caminho é suportado, então o plano B não foi implementado
+- [x] Com credenciais, o envio em Sepolia sai sem nenhum pop-up e devolve um hash — **verificado em Sepolia em 26/11 (sem pop-up)**; a tipagem instalada da Privy (`UnsignedTransactionRequest.data?: string`, `chainId?: number`) confirma que o caminho é suportado, então o plano B não foi implementado
 - [ ] Se o caminho por `data` não funcionar, o plano B (provider EIP-1193 + viem `walletClient`) fica implementado e anotado no plano
 - [ ] Rede diferente de Sepolia → aviso e envio bloqueado
 **Verificação:** manual em Sepolia (precisa de credenciais); `npm test -- src/lib/erc20.test.ts` para a codificação do calldata
@@ -190,7 +190,7 @@ Toda tarefa só conta como feita com `npm run lint && npm run typecheck && npm t
 **Arquivos:** `README.md`, `docs/ARCHITECTURE.md`, `docs/SECURITY.md`, `docs/DEMO.md`
 **Tamanho:** M
 
-### [ ] Tarefa 16: Aceite em Sepolia e polimento de UX
+### [x] Tarefa 16: Aceite em Sepolia e polimento de UX
 **Descrição:** Implantar o `MockUSDC` em Sepolia, rodar o seed, abastecer a wallet demo com ETH de faucet e executar `docs/DEMO.md` de ponta a ponta. Corrigir textos, estados de carregamento e mensagens de erro que vazem jargão.
 **Aceite:**
 - [ ] Todos os itens de Success Criteria da `SPEC.md` marcados
