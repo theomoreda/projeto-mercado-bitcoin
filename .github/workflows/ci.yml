@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, feat/mb-wallet-bridge-v1]
+
+# Uma execução por branch/PR: um push novo cancela a anterior.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Tudo aqui é testnet/local. Nenhum segredo é usado no CI.
+  NODE_VERSION: "24"
+
+jobs:
+  web:
+    name: Lint, tipos, unit e build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npx prettier --check .
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - name: Build
+        run: npm run build
+        env:
+          # Valores só para o build compilar; o app nunca chega a falar com a Privy ou com a rede.
+          # O Privy valida o formato do App ID (25 caracteres) ao prerenderizar a página inicial.
+          NEXT_PUBLIC_PRIVY_APP_ID: clabcdefghijklmnopqrstuvw
+          NEXT_PUBLIC_TOKEN_ADDRESS: "0x0000000000000000000000000000000000000001"
+          NEXT_PUBLIC_EXPLORER_URL: https://sepolia.etherscan.io
+
+  contracts:
+    name: Contratos (Foundry)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: contracts
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive # forge-std e openzeppelin-contracts
+      - uses: foundry-rs/foundry-toolchain@v1
+      - run: forge fmt --check src script test
+      - run: forge build --sizes
+      - run: forge test -vv
+
+  integration:
+    name: Integração (Postgres + Anvil)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: mb
+          POSTGRES_PASSWORD: mb
+          POSTGRES_DB: mb_wallet_bridge_test
+        # A suíte espera o Postgres em 127.0.0.1:5433 (mesma porta do docker compose local).
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U mb"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive # o globalSetup roda `forge build`
+      - uses: foundry-rs/foundry-toolchain@v1 # forge + anvil
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm run test:integration
+        env:
+          TEST_DATABASE_URL: postgres://mb:mb@127.0.0.1:5433/mb_wallet_bridge_test
