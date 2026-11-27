@@ -14,6 +14,15 @@ import { makeDeps, req } from "./deps.ts";
 let c: TestChain;
 const WALLET = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8" as const;
 const deps = () => makeDeps({ demo: { email: "demo@x.com", wallet: WALLET } }, c.ctx);
+/** Dois e-mails na demo, mas só "demo" entra: "other" nunca cria conta. */
+const depsTwoEmails = () =>
+  makeDeps(
+    {
+      demo: { email: "demo@x.com", wallet: WALLET },
+      other: { email: "other@x.com" },
+    },
+    c.ctx,
+  );
 
 const toWallet = async (amount: string) => {
   const res = await handleCreateTransfer(
@@ -82,6 +91,31 @@ describe("reconcile", () => {
     expect(r.ok).toBe(true);
     expect(r.accounts[0].inTransitMicro).toBe(3_000_000n - 10_000_000n);
     expect(r.treasury?.diffMicro).toBe(0n);
+  });
+
+  it("dois e-mails na demo e só um login: o lastro do que não entrou não é diferença", async () => {
+    await c.setTokenBalance(c.ctx.treasury.address, 2_000_000_000n); // seed: 2 × 1.000,00
+    const r = await reconcile(depsTwoEmails());
+    expect(r.ok).toBe(true);
+    expect(r.accounts).toHaveLength(1);
+    expect(r.treasury).toMatchObject({
+      onchainMicro: 2_000_000_000n,
+      unclaimedMicro: 1_000_000_000n,
+      diffMicro: 0n,
+    });
+
+    await poll(await toWallet("100")); // a conta que entrou movimenta; o lastro do outro fica
+    await c.mine(1);
+    const after = await reconcile(depsTwoEmails());
+    expect(after.ok).toBe(true);
+    expect(after.treasury?.diffMicro).toBe(0n);
+  });
+
+  it("lastro faltando para o e-mail que ainda não entrou continua sendo alertado", async () => {
+    // Tesouraria só com o lastro de 1 conta, mas a demo tem 2 e-mails.
+    const r = await reconcile(depsTwoEmails());
+    expect(r.ok).toBe(false);
+    expect(r.treasury?.diffMicro).toBe(-1_000_000_000n);
   });
 
   it("diferença forçada no ledger vira alerta", async () => {

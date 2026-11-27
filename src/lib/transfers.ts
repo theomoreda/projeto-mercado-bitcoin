@@ -23,6 +23,8 @@ import {
   confirmInbound,
   createOutbound,
   failInbound,
+  findByClientRequestId,
+  INBOUND_NOT_FOUND,
   recordInbound,
   refundOutbound,
   settleOutbound,
@@ -108,11 +110,9 @@ async function startInbound(
     expiresAt: new Date(Date.now() + deps.config.observationWindowMs),
   });
   if (recorded) return recorded;
-  // clientRequestId já usado por outra transferência: devolve aquela.
-  const [byRequest] = await deps.db
-    .select()
-    .from(transfers)
-    .where(eq(transfers.clientRequestId, clientRequestId));
+  // clientRequestId já usado por outra transferência desta conta: devolve aquela.
+  const byRequest = await findByClientRequestId(deps.db, account.id, clientRequestId);
+  if (!byRequest) throw new HttpError(409, "pedido_conflitante");
   return byRequest;
 }
 
@@ -124,6 +124,10 @@ async function startOutbound(
 ) {
   const wallet = account.walletAddress as Address | null;
   if (!wallet) throw new HttpError(409, "carteira_nao_ativada");
+  // Retry do mesmo pedido: devolve a transferência já criada antes de olhar o saldo
+  // (que já caiu), senão repetir um saque do saldo inteiro falharia com saldo insuficiente.
+  const already = await findByClientRequestId(deps.db, account.id, clientRequestId);
+  if (already) return already;
   const parsed = parseAmount(amount, account.availableCents);
   if (!parsed.ok) throw new HttpError(422, parsed.reason);
 
@@ -154,7 +158,8 @@ async function startOutbound(
     console.error("assinatura MB→wallet falhou", err);
     throw new HttpError(503, "servico_indisponivel");
   }
-  if (!result.ok) throw new HttpError(422, result.reason);
+  if (!result.ok)
+    throw new HttpError(result.reason === "saldo_insuficiente" ? 422 : 409, result.reason);
 
   if (result.created) {
     // Depois do commit. Se falhar aqui, advance() retransmite o rawTx gravado.
@@ -210,7 +215,7 @@ export async function creditInbound(
   const status = await getTxStatus(chain, txHash);
   if (status.kind === "unknown") {
     if (expiresAt && expiresAt < new Date()) {
-      await failInbound(deps.db, txHash, "transacao_nao_encontrada");
+      await failInbound(deps.db, txHash, INBOUND_NOT_FOUND);
     }
     return undefined;
   }
@@ -270,6 +275,10 @@ const MAX_SCAN_CHUNKS = 20;
  * Recuperação: lê os Transfer(carteira → Conta MB) desde `last_scanned_block` até o
  * último bloco já com CONFIRMATIONS confirmações e credita cada hash via creditInbound.
  * Cobre quem fechou a aba entre enviar e avisar. Revarrer é seguro (hash único).
+ *
+ * O marcador só avança além de uma janela quando todos os hashes dela chegaram a um
+ * estado final. Se o nó ainda não tem o recibo (nó atrasado) ou o tx ainda não tem
+ * confirmações, a janela é lida de novo na próxima passada em vez de ser pulada.
  */
 export async function scanInbound(
   deps: AppDeps,
@@ -285,9 +294,14 @@ export async function scanInbound(
   let from = account.lastScannedBlock;
   for (let i = 0; i < MAX_SCAN_CHUNKS && from <= safeTo; i++) {
     const to = from + chunk - 1n < safeTo ? from + chunk - 1n : safeTo;
+    let unresolved = false;
     for (const { txHash } of await findInboundTransfers(chain, wallet, from, to, chunk)) {
-      await creditInbound(deps, chain, account, txHash);
+      const confirmations = await creditInbound(deps, chain, account, txHash);
+      if (confirmations === undefined || confirmations < deps.config.confirmations) {
+        unresolved = true;
+      }
     }
+    if (unresolved) return false; // não avança o marcador: a próxima passada relê esta janela
     from = to + 1n;
     await deps.db
       .update(accounts)
