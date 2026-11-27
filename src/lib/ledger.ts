@@ -40,7 +40,8 @@ export async function createAccount(
 export type SignedTx = { txHash: string; nonce: bigint; rawTx: string };
 
 export type OutboundResult =
-  { ok: true; transfer: Transfer; created: boolean } | { ok: false; reason: "saldo_insuficiente" };
+  | { ok: true; transfer: Transfer; created: boolean }
+  | { ok: false; reason: "saldo_insuficiente" | "pedido_conflitante" };
 
 /**
  * MB → wallet: reserva o valor e registra a transferência numa única transação.
@@ -52,7 +53,7 @@ export async function createOutbound(
   input: { accountId: string; cents: Cents; clientRequestId: string; expiresAt?: Date },
   sign?: (transfer: Transfer, tx: Tx) => Promise<SignedTx>,
 ): Promise<OutboundResult> {
-  const existing = await findByClientRequestId(db, input.clientRequestId);
+  const existing = await findByClientRequestId(db, input.accountId, input.clientRequestId);
   if (existing) return { ok: true, transfer: existing, created: false };
 
   try {
@@ -93,18 +94,31 @@ export async function createOutbound(
   } catch (err) {
     // Pedido duplicado concorrente: a outra transação venceu; devolve o registro dela.
     if (isUniqueViolation(err)) {
-      const winner = await findByClientRequestId(db, input.clientRequestId);
+      const winner = await findByClientRequestId(db, input.accountId, input.clientRequestId);
       if (winner) return { ok: true, transfer: winner, created: false };
+      // O id já pertence a outra conta (UNIQUE global): nunca devolve o registro alheio.
+      if (isClientRequestIdViolation(err)) return { ok: false, reason: "pedido_conflitante" };
     }
     throw err;
   }
 }
 
-async function findByClientRequestId(db: Executor, clientRequestId: string) {
+/** Violação do UNIQUE de client_request_id (e não de tx_hash): o `detail` do Postgres traz a coluna. */
+function isClientRequestIdViolation(err: unknown): boolean {
+  const e = err as { detail?: string; cause?: { detail?: string } };
+  return String(e?.detail ?? e?.cause?.detail ?? "").includes("(client_request_id)");
+}
+
+/** Busca a transferência de um pedido, sempre restrita à conta que o fez. */
+export async function findByClientRequestId(
+  db: Executor,
+  accountId: string,
+  clientRequestId: string,
+) {
   const [t] = await db
     .select()
     .from(transfers)
-    .where(eq(transfers.clientRequestId, clientRequestId));
+    .where(and(eq(transfers.accountId, accountId), eq(transfers.clientRequestId, clientRequestId)));
   return t;
 }
 
