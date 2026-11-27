@@ -1,11 +1,20 @@
 import { randomUUID } from "node:crypto";
-import { createWalletClient, erc20Abi, http, type Address, type Hex } from "viem";
+import { eq } from "drizzle-orm";
+import {
+  createWalletClient,
+  encodeFunctionData,
+  erc20Abi,
+  http,
+  type Address,
+  type Hex,
+} from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { foundry } from "viem/chains";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { accounts, transfers } from "../../src/db/schema.ts";
 import { tokenBalance } from "../../src/lib/chain.ts";
 import { custodialMicro } from "../../src/lib/ledger.ts";
+import { handleMe } from "../../src/lib/me.ts";
 import { handleCreateTransfer, handleGetTransfer } from "../../src/lib/transfers.ts";
 import { handleActivateWallet } from "../../src/lib/wallet.ts";
 import { KEYS, startChain, type TestChain } from "./anvil.ts";
@@ -46,6 +55,7 @@ const notify = (txHash: string, clientRequestId: string = randomUUID()) =>
 const status = async (id: string) =>
   (await handleGetTransfer(req(`/api/transfers/${id}`, "tok-demo"), deps(), id)).json();
 const account = async () => (await db.select().from(accounts))[0];
+const me = async () => (await handleMe(req("/api/me", "tok-demo"), deps())).json();
 
 let totalMicro: bigint; // custodial + wallet no início de cada teste
 
@@ -126,5 +136,46 @@ describe("POST /api/transfers WALLET_TO_MB", () => {
 
   it("hash malformado → 400", async () => {
     expect((await notify("0x1234")).status).toBe(400);
+  });
+
+  it("expirou como FALHOU sem recibo e o tx minera depois → credita uma vez só", async () => {
+    await c.testClient.setAutomine(false);
+    const data = encodeFunctionData({
+      abi: erc20Abi,
+      functionName: "transfer",
+      args: [c.ctx.treasury.address, 2_000_000n],
+    });
+    const raw = await c.user.signTransaction(
+      await c.user.prepareTransactionRequest({ to: c.token, data }),
+    );
+    const hash = await c.pub.sendRawTransaction({ serializedTransaction: raw });
+    const t = await (await notify(hash)).json();
+    const before = (await account()).availableCents;
+
+    // O nó perde o tx e a janela de observação vence: o app fecha como FALHOU.
+    await c.testClient.dropTransaction({ hash });
+    await db
+      .update(transfers)
+      .set({ expiresAt: new Date(Date.now() - 1_000) })
+      .where(eq(transfers.id, t.id));
+    expect(await status(t.id)).toMatchObject({
+      status: "FALHOU",
+      failureReason: "transacao_nao_encontrada",
+    });
+    expect((await account()).availableCents).toBe(before);
+
+    // O mesmo tx minera depois (nó atrasado): a varredura do painel reabre e credita.
+    await c.pub.sendRawTransaction({ serializedTransaction: raw });
+    await c.mine(2);
+    await me();
+    expect((await account()).availableCents).toBe(before + 200n);
+    const [row] = await db.select().from(transfers);
+    expect(row).toMatchObject({ txHash: hash, status: "CONFIRMADA", failureReason: null });
+
+    await me();
+    await me();
+    expect((await account()).availableCents).toBe(before + 200n);
+    expect(await db.select().from(transfers)).toHaveLength(1);
+    await expectInvariant();
   });
 });
