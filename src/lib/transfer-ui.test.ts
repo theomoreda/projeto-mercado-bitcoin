@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { amountError, errorMessage, statusCopy, truncateInput } from "./transfer-ui.ts";
+import {
+  amountError,
+  amountFieldError,
+  errorMessage,
+  failureReasonCopy,
+  hasTooManyDecimals,
+  statusCopy,
+  truncateInput,
+  walletErrorMessage,
+} from "./transfer-ui.ts";
 
 describe("truncateInput", () => {
   it.each([
@@ -62,5 +71,51 @@ describe("errorMessage", () => {
     );
     expect(errorMessage("qualquer_coisa")).toBe("Algo deu errado. Tente novamente.");
     expect(errorMessage("transacao_nao_encontrada")).toMatch(/atualizado em instantes/);
+  });
+});
+
+describe("amountFieldError (telas 08 e 09 do wireframe)", () => {
+  it("mais de 2 casas é erro visível, com exemplo truncado (nunca arredondado)", () => {
+    expect(hasTooManyDecimals("10,555")).toBe(true);
+    expect(hasTooManyDecimals("10,55")).toBe(false);
+    expect(amountFieldError("10,555", 100_000n, "conta MB")).toBe(
+      "Use no máximo 2 casas decimais. Exemplo: 10,55",
+    );
+    expect(amountFieldError("0.019", 100_000n, "conta MB")).toBe(
+      "Use no máximo 2 casas decimais. Exemplo: 0.01",
+    );
+  });
+
+  it("saldo insuficiente diz quanto a pessoa tem na origem", () => {
+    expect(amountFieldError("1500", 100_000n, "conta MB")).toBe(
+      "Saldo insuficiente. Você tem 1.000,00 Mock USDC na conta MB.",
+    );
+    expect(amountFieldError("300", 25_000n, "sua wallet")).toBe(
+      "Saldo insuficiente. Você tem 250,00 Mock USDC na sua wallet.",
+    );
+  });
+
+  it("mantém as mensagens de RF-06 para o resto", () => {
+    expect(amountFieldError("0", 100n, "conta MB")).toBe("Informe um valor maior que zero.");
+    expect(amountFieldError("", 100n, "conta MB")).toBeNull();
+    expect(amountFieldError("1", 100n, "conta MB")).toBeNull();
+  });
+});
+
+describe("walletErrorMessage", () => {
+  it("falta de Sepolia ETH vira mensagem legível, não 'Algo deu errado'", () => {
+    expect(walletErrorMessage("insufficient funds for gas * price + value")).toMatch(
+      /sem Sepolia ETH/,
+    );
+    expect(walletErrorMessage("User rejected the request.")).toMatch(/cancelada/);
+    expect(walletErrorMessage("boom")).toMatch(/Nada saiu dela/);
+  });
+});
+
+describe("failureReasonCopy", () => {
+  it("traduz o motivo gravado no ledger", () => {
+    expect(failureReasonCopy("transacao_expirada")).toBe("Tempo de confirmação esgotado");
+    expect(failureReasonCopy("outro")).toBe("A rede não confirmou a transação");
+    expect(failureReasonCopy(null)).toBeNull();
   });
 });

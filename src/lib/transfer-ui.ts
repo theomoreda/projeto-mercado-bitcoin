@@ -1,6 +1,6 @@
 /** Textos e regras da tela de transferência (sem React, testável). Sem jargão de blockchain. */
 import type { Direction, Status } from "../db/schema.ts";
-import { parseAmount, type AmountError } from "./money.ts";
+import { formatCents, parseAmount, type AmountError } from "./money.ts";
 
 /** Corta o texto digitado em 2 casas decimais (nunca arredonda) e avisa se cortou. */
 export function truncateInput(input: string): { text: string; truncated: boolean } {
@@ -62,3 +62,53 @@ export const DIRECTION_LABEL: Record<Direction, string> = {
   MB_TO_WALLET: "Conta MB → Minha carteira",
   WALLET_TO_MB: "Minha carteira → Conta MB",
 };
+
+/** O texto tem mais de 2 casas decimais (o wireframe trata como erro, não como corte silencioso). */
+export function hasTooManyDecimals(input: string): boolean {
+  return /[.,]\d{3,}\s*$/.test(input.trim());
+}
+
+/**
+ * Mensagem do campo de valor na tela de transferência (telas 08 e 09 do wireframe), ou null.
+ * `source` é de onde sai o dinheiro, para dizer quanto a pessoa tem lá.
+ */
+export function amountFieldError(
+  input: string,
+  availableCents: bigint,
+  source: "conta MB" | "sua wallet",
+): string | null {
+  if (hasTooManyDecimals(input)) {
+    return `Use no máximo 2 casas decimais. Exemplo: ${truncateInput(input.trim()).text}`;
+  }
+  const r = parseAmount(input, availableCents);
+  if (r.ok) return null;
+  if (r.reason === "saldo_insuficiente") {
+    return `Saldo insuficiente. Você tem ${formatCents(availableCents)} Mock USDC na ${source}.`;
+  }
+  return AMOUNT_MESSAGES[r.reason];
+}
+
+/** Erro ao assinar na carteira embutida (volta wallet → MB), em linguagem simples. */
+export function walletErrorMessage(message: string): string {
+  if (/insufficient funds/i.test(message)) {
+    return "Sua wallet está sem Sepolia ETH para pagar a taxa de rede. Peça para abastecer a wallet de demonstração e tente de novo. Nada saiu da sua wallet.";
+  }
+  if (/reject|denied|cancel/i.test(message)) {
+    return "Operação cancelada. Nada saiu da sua wallet.";
+  }
+  if (/chain|rede|network/i.test(message)) return API_MESSAGES.rede_incorreta;
+  return "Não foi possível enviar da sua wallet agora. Nada saiu dela. Tente novamente.";
+}
+
+/** Motivo de falha legível (tela 14). */
+export function failureReasonCopy(reason: string | null): string | null {
+  if (!reason) return null;
+  const map: Record<string, string> = {
+    transacao_expirada: "Tempo de confirmação esgotado",
+    transacao_substituida: "Tempo de confirmação esgotado",
+    transacao_revertida: "A rede recusou a transação",
+    transacao_nao_encontrada: "A rede não encontrou a transação a tempo",
+    transferencia_invalida: "Transferência sem valor válido",
+  };
+  return map[reason] ?? "A rede não confirmou a transação";
+}
