@@ -15,7 +15,7 @@ export async function requireAccount(
     throw new HttpError(403, "acesso_restrito");
   const account = await createAccount(deps.db, {
     privyUserId: identity.privyUserId,
-    email: identity.email!,
+    email, // sempre minúsculo: é o que reconcile e DEMO_EMAILS comparam
     initialCents: deps.config.initialCents,
   });
   return { identity, account };

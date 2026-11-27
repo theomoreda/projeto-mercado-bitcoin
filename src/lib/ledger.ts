@@ -3,7 +3,7 @@
  * estado atual no próprio UPDATE, então chamadas repetidas ou concorrentes afetam o
  * saldo no máximo uma vez. As garantias finais ficam no banco (CHECK e UNIQUE).
  */
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, or, sql, type SQL } from "drizzle-orm";
 import type { Executor, Tx } from "../db/index.ts";
 import { accounts, transfers, type Account, type Transfer } from "../db/schema.ts";
 import { isUniqueViolation } from "./http.ts";
@@ -40,7 +40,8 @@ export async function createAccount(
 export type SignedTx = { txHash: string; nonce: bigint; rawTx: string };
 
 export type OutboundResult =
-  { ok: true; transfer: Transfer; created: boolean } | { ok: false; reason: "saldo_insuficiente" };
+  | { ok: true; transfer: Transfer; created: boolean }
+  | { ok: false; reason: "saldo_insuficiente" | "pedido_conflitante" };
 
 /**
  * MB → wallet: reserva o valor e registra a transferência numa única transação.
@@ -52,7 +53,7 @@ export async function createOutbound(
   input: { accountId: string; cents: Cents; clientRequestId: string; expiresAt?: Date },
   sign?: (transfer: Transfer, tx: Tx) => Promise<SignedTx>,
 ): Promise<OutboundResult> {
-  const existing = await findByClientRequestId(db, input.clientRequestId);
+  const existing = await findByClientRequestId(db, input.accountId, input.clientRequestId);
   if (existing) return { ok: true, transfer: existing, created: false };
 
   try {
@@ -93,34 +94,54 @@ export async function createOutbound(
   } catch (err) {
     // Pedido duplicado concorrente: a outra transação venceu; devolve o registro dela.
     if (isUniqueViolation(err)) {
-      const winner = await findByClientRequestId(db, input.clientRequestId);
+      const winner = await findByClientRequestId(db, input.accountId, input.clientRequestId);
       if (winner) return { ok: true, transfer: winner, created: false };
+      // O id já pertence a outra conta (UNIQUE global): nunca devolve o registro alheio.
+      if (isClientRequestIdViolation(err)) return { ok: false, reason: "pedido_conflitante" };
     }
     throw err;
   }
 }
 
-async function findByClientRequestId(db: Executor, clientRequestId: string) {
+/** Violação do UNIQUE de client_request_id (e não de tx_hash): o `detail` do Postgres traz a coluna. */
+function isClientRequestIdViolation(err: unknown): boolean {
+  const e = err as { detail?: string; cause?: { detail?: string } };
+  return String(e?.detail ?? e?.cause?.detail ?? "").includes("(client_request_id)");
+}
+
+/** Busca a transferência de um pedido, sempre restrita à conta que o fez. */
+export async function findByClientRequestId(
+  db: Executor,
+  accountId: string,
+  clientRequestId: string,
+) {
   const [t] = await db
     .select()
     .from(transfers)
-    .where(eq(transfers.clientRequestId, clientRequestId));
+    .where(and(eq(transfers.accountId, accountId), eq(transfers.clientRequestId, clientRequestId)));
   return t;
 }
 
-/** Fecha uma transferência PROCESSANDO; devolve a linha só se esta chamada fez a transição. */
+/**
+ * Fecha uma transferência PROCESSANDO (ou o estado aberto indicado em `open`); devolve a
+ * linha só se esta chamada fez a transição.
+ */
 async function closeTransfer(
   tx: Tx,
   where: ReturnType<typeof and>,
   set: Partial<Pick<Transfer, "status" | "failureReason" | "amountMicro">>,
+  open: SQL | undefined = eq(transfers.status, "PROCESSANDO"),
 ) {
   const [t] = await tx
     .update(transfers)
     .set({ ...set, updatedAt: new Date() })
-    .where(and(where, eq(transfers.status, "PROCESSANDO")))
+    .where(and(where, open))
     .returning();
   return t;
 }
+
+/** Motivo gravado quando uma entrada expira sem que o nó tenha visto o tx (sem recibo). */
+export const INBOUND_NOT_FOUND = "transacao_nao_encontrada";
 
 const outbound = (id: string) => and(eq(transfers.id, id), eq(transfers.direction, "MB_TO_WALLET"));
 
@@ -184,6 +205,11 @@ export async function recordInbound(
  * Wallet → MB confirmado on-chain: credita o valor do evento, uma vez por hash.
  * Valores com mais de 2 casas entram inteiros; a sobra abaixo de 1 centavo vai para
  * `excess_micro` e vira centavo quando acumula 10⁴.
+ *
+ * Uma entrada que expirou como FALHOU por falta de recibo (`INBOUND_NOT_FOUND`) é
+ * reaberta aqui: se o tx minerou depois, o recibo confirmado vale mais que o palpite de
+ * "não encontrado". Falhas por reversão ou transferência inválida não são reabertas.
+ * A transição é um único UPDATE condicionado ao estado, então o crédito ocorre uma vez.
  */
 export async function confirmInbound(
   db: Executor,
@@ -201,7 +227,11 @@ export async function confirmInbound(
         eq(transfers.accountId, input.accountId),
         eq(transfers.direction, "WALLET_TO_MB"),
       ),
-      { status: "CONFIRMADA", amountMicro: input.amountMicro },
+      { status: "CONFIRMADA", failureReason: null, amountMicro: input.amountMicro },
+      or(
+        eq(transfers.status, "PROCESSANDO"),
+        and(eq(transfers.status, "FALHOU"), eq(transfers.failureReason, INBOUND_NOT_FOUND)),
+      ),
     );
     if (!t) return false;
     const cents = input.amountMicro / MICRO_PER_CENT;
