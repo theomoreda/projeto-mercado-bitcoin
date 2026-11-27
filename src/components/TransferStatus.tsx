@@ -174,7 +174,7 @@ export function TransferStatus({ tracked, me, onRegistered, onSettled, onHome, o
   }
 
   const ok = status === "CONFIRMADA";
-  const copy = statusCopy({ status, direction });
+  const copy = statusCopy({ status, direction, failureReason: t?.failureReason });
   return (
     <section className="card center-card" aria-labelledby="status-title">
       <div className={`status-icon ${ok ? "ok" : "err"}`} aria-hidden="true">

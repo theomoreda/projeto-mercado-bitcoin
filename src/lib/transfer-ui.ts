@@ -42,7 +42,11 @@ export function errorMessage(code: string): string {
 
 export type StatusCopy = { title: string; detail?: string; tone: "muted" | "ok" | "error" };
 
-export function statusCopy(t: { status: Status; direction: Direction }): StatusCopy {
+export function statusCopy(t: {
+  status: Status;
+  direction: Direction;
+  failureReason?: string | null;
+}): StatusCopy {
   if (t.status === "PROCESSANDO") {
     return {
       title: "Processando…",
@@ -51,14 +55,13 @@ export function statusCopy(t: { status: Status; direction: Direction }): StatusC
     };
   }
   if (t.status === "CONFIRMADA") return { title: "Transferência concluída", tone: "ok" };
-  return {
-    title: "Transferência não concluída",
-    detail:
-      t.direction === "MB_TO_WALLET"
-        ? "O valor voltou para sua Conta MB."
-        : "Nada saiu da sua carteira.",
-    tone: "error",
-  };
+  let detail: string;
+  if (t.direction === "MB_TO_WALLET") detail = "O valor voltou para sua Conta MB.";
+  else if (t.failureReason === "transacao_nao_encontrada") {
+    // A entrada expirou sem recibo, mas o tx pode minerar depois: o backend reabre e credita.
+    detail = "Se ela aparecer na rede depois, o valor entra na sua Conta MB automaticamente.";
+  } else detail = "Nada saiu da sua carteira.";
+  return { title: "Transferência não concluída", detail, tone: "error" };
 }
 
 export const DIRECTION_LABEL: Record<Direction, string> = {

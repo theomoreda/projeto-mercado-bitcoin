@@ -61,6 +61,28 @@ describe("statusCopy", () => {
       "Nada saiu da sua carteira.",
     );
   });
+
+  it("volta sem recibo não diz que nada saiu: o crédito ainda pode chegar (PR #2)", () => {
+    const copy = statusCopy({
+      status: "FALHOU",
+      direction: "WALLET_TO_MB",
+      failureReason: "transacao_nao_encontrada",
+    });
+    expect(copy.detail).toBe(
+      "Se ela aparecer na rede depois, o valor entra na sua Conta MB automaticamente.",
+    );
+    expect(copy.detail).not.toMatch(/Nada saiu/);
+  });
+
+  it("volta revertida continua dizendo que nada saiu da carteira", () => {
+    expect(
+      statusCopy({
+        status: "FALHOU",
+        direction: "WALLET_TO_MB",
+        failureReason: "transacao_revertida",
+      }).detail,
+    ).toBe("Nada saiu da sua carteira.");
+  });
 });
 
 describe("errorMessage", () => {
