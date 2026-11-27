@@ -127,7 +127,14 @@ async function signTreasuryTx(
   return { txHash: keccak256(rawTx), nonce: BigInt(nonce), rawTx };
 }
 
-const ALREADY_SEEN = /already known|already imported|known transaction|nonce too low/i;
+const ALREADY_SEEN =
+  /already known|already imported|known transaction|nonce too low|replacement transaction underpriced/i;
+
+/**
+ * Respostas do nó que, para a retransmissão de um tx idêntico, querem dizer "já tenho
+ * este tx/nonce". "underpriced" aparece quando o mesmo tx já está no mempool (Alchemy).
+ */
+export const isAlreadySeen = (message: string): boolean => ALREADY_SEEN.test(message);
 
 /**
  * Transmite um tx já assinado. Retransmitir é seguro: se o nó já conhece o tx ou o
@@ -137,7 +144,7 @@ export async function broadcast(ctx: ChainCtx, rawTx: Hex): Promise<void> {
   try {
     await ctx.publicClient.sendRawTransaction({ serializedTransaction: rawTx });
   } catch (err) {
-    if (!ALREADY_SEEN.test(String((err as Error).message))) throw err;
+    if (!isAlreadySeen(String((err as Error).message))) throw err;
   }
 }
 
