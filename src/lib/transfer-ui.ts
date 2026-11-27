@@ -1,6 +1,6 @@
 /** Textos e regras da tela de transferência (sem React, testável). Sem jargão de blockchain. */
 import type { Direction, Status } from "../db/schema.ts";
-import { parseAmount, type AmountError } from "./money.ts";
+import { formatCents, parseAmount, type AmountError } from "./money.ts";
 
 /** Corta o texto digitado em 2 casas decimais (nunca arredonda) e avisa se cortou. */
 export function truncateInput(input: string): { text: string; truncated: boolean } {
@@ -29,6 +29,9 @@ const API_MESSAGES: Record<string, string> = {
   servico_indisponivel: "Não foi possível concluir agora. Tente novamente em instantes.",
   carteira_nao_ativada: "Ative sua carteira antes de transferir.",
   rede_incorreta: "Sua carteira está em uma rede diferente. Recarregue a página.",
+  pedido_invalido: "Não entendemos este pedido. Volte ao início e tente de novo.",
+  pedido_conflitante:
+    "Este pedido já foi registrado com outros dados. Volte ao início e faça uma nova transferência.",
   // O envio saiu da carteira; a varredura credita assim que o servidor enxergar o tx.
   transacao_nao_encontrada: "Recebemos sua transferência. O saldo será atualizado em instantes.",
 };
@@ -39,7 +42,11 @@ export function errorMessage(code: string): string {
 
 export type StatusCopy = { title: string; detail?: string; tone: "muted" | "ok" | "error" };
 
-export function statusCopy(t: { status: Status; direction: Direction }): StatusCopy {
+export function statusCopy(t: {
+  status: Status;
+  direction: Direction;
+  failureReason?: string | null;
+}): StatusCopy {
   if (t.status === "PROCESSANDO") {
     return {
       title: "Processando…",
@@ -48,17 +55,66 @@ export function statusCopy(t: { status: Status; direction: Direction }): StatusC
     };
   }
   if (t.status === "CONFIRMADA") return { title: "Transferência concluída", tone: "ok" };
-  return {
-    title: "Transferência não concluída",
-    detail:
-      t.direction === "MB_TO_WALLET"
-        ? "O valor voltou para sua Conta MB."
-        : "Nada saiu da sua carteira.",
-    tone: "error",
-  };
+  let detail: string;
+  if (t.direction === "MB_TO_WALLET") detail = "O valor voltou para sua Conta MB.";
+  else if (t.failureReason === "transacao_nao_encontrada") {
+    // A entrada expirou sem recibo, mas o tx pode minerar depois: o backend reabre e credita.
+    detail = "Se ela aparecer na rede depois, o valor entra na sua Conta MB automaticamente.";
+  } else detail = "Nada saiu da sua carteira.";
+  return { title: "Transferência não concluída", detail, tone: "error" };
 }
 
 export const DIRECTION_LABEL: Record<Direction, string> = {
   MB_TO_WALLET: "Conta MB → Minha carteira",
   WALLET_TO_MB: "Minha carteira → Conta MB",
 };
+
+/** O texto tem mais de 2 casas decimais (o wireframe trata como erro, não como corte silencioso). */
+export function hasTooManyDecimals(input: string): boolean {
+  return /[.,]\d{3,}\s*$/.test(input.trim());
+}
+
+/**
+ * Mensagem do campo de valor na tela de transferência (telas 08 e 09 do wireframe), ou null.
+ * `source` é de onde sai o dinheiro, para dizer quanto a pessoa tem lá.
+ */
+export function amountFieldError(
+  input: string,
+  availableCents: bigint,
+  source: "conta MB" | "sua wallet",
+): string | null {
+  if (hasTooManyDecimals(input)) {
+    return `Use no máximo 2 casas decimais. Exemplo: ${truncateInput(input.trim()).text}`;
+  }
+  const r = parseAmount(input, availableCents);
+  if (r.ok) return null;
+  if (r.reason === "saldo_insuficiente") {
+    return `Saldo insuficiente. Você tem ${formatCents(availableCents)} Mock USDC na ${source}.`;
+  }
+  return AMOUNT_MESSAGES[r.reason];
+}
+
+/** Erro ao assinar na carteira embutida (volta wallet → MB), em linguagem simples. */
+export function walletErrorMessage(message: string): string {
+  if (/insufficient funds/i.test(message)) {
+    return "Sua wallet está sem Sepolia ETH para pagar a taxa de rede. Peça para abastecer a wallet de demonstração e tente de novo. Nada saiu da sua wallet.";
+  }
+  if (/reject|denied|cancel/i.test(message)) {
+    return "Operação cancelada. Nada saiu da sua wallet.";
+  }
+  if (/chain|rede|network/i.test(message)) return API_MESSAGES.rede_incorreta;
+  return "Não foi possível enviar da sua wallet agora. Nada saiu dela. Tente novamente.";
+}
+
+/** Motivo de falha legível (tela 14). */
+export function failureReasonCopy(reason: string | null): string | null {
+  if (!reason) return null;
+  const map: Record<string, string> = {
+    transacao_expirada: "Tempo de confirmação esgotado",
+    transacao_substituida: "Tempo de confirmação esgotado",
+    transacao_revertida: "A rede recusou a transação",
+    transacao_nao_encontrada: "A rede não encontrou a transação a tempo",
+    transferencia_invalida: "Transferência sem valor válido",
+  };
+  return map[reason] ?? "A rede não confirmou a transação";
+}

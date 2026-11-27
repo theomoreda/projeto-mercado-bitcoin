@@ -4,3 +4,6 @@ contracts/lib
 contracts/out
 contracts/cache
 *.md
+
+test-results
+playwright-report

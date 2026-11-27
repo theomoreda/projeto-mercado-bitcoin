@@ -1,7 +1,7 @@
 "use client";
 
-import { usePrivy } from "@privy-io/react-auth";
 import { useCallback } from "react";
+import { useAuth } from "../components/auth/AuthContext.tsx";
 
 export class ApiError extends Error {
   constructor(
@@ -14,7 +14,7 @@ export class ApiError extends Error {
 
 /** fetch autenticado para /api/*: anexa o access token da Privy e trata erros. */
 export function useApi() {
-  const { getAccessToken } = usePrivy();
+  const { getAccessToken } = useAuth();
   return useCallback(
     async <T>(path: string, init: RequestInit = {}): Promise<T> => {
       const token = await getAccessToken();
