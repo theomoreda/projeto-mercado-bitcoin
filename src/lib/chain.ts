@@ -28,17 +28,30 @@ export type ChainCtx = {
   chainId: number;
 };
 
+/** Redes permitidas: Sepolia e o Anvil local dos testes. Nunca mainnet (SPEC.md › Boundaries). */
+const ALLOWED_CHAINS: Record<number, string> = { 11155111: "Sepolia", 31337: "Anvil local" };
+
+export function assertTestnet(chainId: number): void {
+  if (!(chainId in ALLOWED_CHAINS)) {
+    throw new Error(
+      `RPC_URL aponta para a rede ${chainId}; este projeto só opera na Sepolia (11155111) ou no Anvil local (31337).`,
+    );
+  }
+}
+
 export async function createChainCtx(cfg: {
   rpcUrl: string;
   treasuryPrivateKey: Hex;
   tokenAddress: Address;
 }): Promise<ChainCtx> {
   const publicClient = createPublicClient({ transport: http(cfg.rpcUrl) });
+  const chainId = await publicClient.getChainId();
+  assertTestnet(chainId); // antes de qualquer assinatura com a chave da tesouraria
   return {
     publicClient,
     treasury: privateKeyToAccount(cfg.treasuryPrivateKey),
     token: cfg.tokenAddress,
-    chainId: await publicClient.getChainId(),
+    chainId,
   };
 }
 

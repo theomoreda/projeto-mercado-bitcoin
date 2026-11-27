@@ -8,6 +8,8 @@ import {MockUSDC} from "../src/MockUSDC.sol";
 /// A conta que assina o deploy (a tesouraria) vira owner do token.
 contract Deploy is Script {
     function run() external returns (MockUSDC token) {
+        // Nunca mainnet: só Sepolia ou o Anvil local.
+        require(block.chainid == 11155111 || block.chainid == 31337, "Deploy permitido so na Sepolia ou no Anvil");
         vm.startBroadcast();
         token = new MockUSDC(msg.sender);
         vm.stopBroadcast();
