@@ -24,6 +24,7 @@ import {
   createOutbound,
   failInbound,
   findByClientRequestId,
+  INBOUND_NOT_FOUND,
   recordInbound,
   refundOutbound,
   settleOutbound,
@@ -214,7 +215,7 @@ export async function creditInbound(
   const status = await getTxStatus(chain, txHash);
   if (status.kind === "unknown") {
     if (expiresAt && expiresAt < new Date()) {
-      await failInbound(deps.db, txHash, "transacao_nao_encontrada");
+      await failInbound(deps.db, txHash, INBOUND_NOT_FOUND);
     }
     return undefined;
   }
