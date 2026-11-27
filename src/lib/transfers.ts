@@ -275,6 +275,10 @@ const MAX_SCAN_CHUNKS = 20;
  * Recuperação: lê os Transfer(carteira → Conta MB) desde `last_scanned_block` até o
  * último bloco já com CONFIRMATIONS confirmações e credita cada hash via creditInbound.
  * Cobre quem fechou a aba entre enviar e avisar. Revarrer é seguro (hash único).
+ *
+ * O marcador só avança além de uma janela quando todos os hashes dela chegaram a um
+ * estado final. Se o nó ainda não tem o recibo (nó atrasado) ou o tx ainda não tem
+ * confirmações, a janela é lida de novo na próxima passada em vez de ser pulada.
  */
 export async function scanInbound(
   deps: AppDeps,
@@ -290,9 +294,14 @@ export async function scanInbound(
   let from = account.lastScannedBlock;
   for (let i = 0; i < MAX_SCAN_CHUNKS && from <= safeTo; i++) {
     const to = from + chunk - 1n < safeTo ? from + chunk - 1n : safeTo;
+    let unresolved = false;
     for (const { txHash } of await findInboundTransfers(chain, wallet, from, to, chunk)) {
-      await creditInbound(deps, chain, account, txHash);
+      const confirmations = await creditInbound(deps, chain, account, txHash);
+      if (confirmations === undefined || confirmations < deps.config.confirmations) {
+        unresolved = true;
+      }
     }
+    if (unresolved) return false; // não avança o marcador: a próxima passada relê esta janela
     from = to + 1n;
     await deps.db
       .update(accounts)
