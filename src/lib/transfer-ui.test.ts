@@ -119,3 +119,10 @@ describe("failureReasonCopy", () => {
     expect(failureReasonCopy(null)).toBeNull();
   });
 });
+
+describe("errorMessage com os códigos novos da API", () => {
+  it("pedido inválido e conflitante têm texto próprio", () => {
+    expect(errorMessage("pedido_invalido")).toMatch(/Não entendemos/);
+    expect(errorMessage("pedido_conflitante")).toMatch(/outros dados/);
+  });
+});

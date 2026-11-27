@@ -29,6 +29,9 @@ const API_MESSAGES: Record<string, string> = {
   servico_indisponivel: "Não foi possível concluir agora. Tente novamente em instantes.",
   carteira_nao_ativada: "Ative sua carteira antes de transferir.",
   rede_incorreta: "Sua carteira está em uma rede diferente. Recarregue a página.",
+  pedido_invalido: "Não entendemos este pedido. Volte ao início e tente de novo.",
+  pedido_conflitante:
+    "Este pedido já foi registrado com outros dados. Volte ao início e faça uma nova transferência.",
   // O envio saiu da carteira; a varredura credita assim que o servidor enxergar o tx.
   transacao_nao_encontrada: "Recebemos sua transferência. O saldo será atualizado em instantes.",
 };

@@ -67,7 +67,10 @@ export function TransferStatus({ tracked, me, onRegistered, onSettled, onHome, o
           ? errorMessage(code)
           : "Sua transferência já saiu da wallet, mas ainda não conseguimos registrá-la no MB. Vamos tentar de novo; você não precisa assinar outra vez.",
       );
-      setRegAttempts((n) => n + 1);
+      // Pedido recusado pela API (não é falha passageira): para de tentar sozinho.
+      const final = code === "pedido_invalido" || code === "pedido_conflitante";
+      if (final) setRegError(errorMessage(code));
+      setRegAttempts((n) => (final ? MAX_AUTO_RETRIES : n + 1));
     } finally {
       setRegistering(false);
     }
